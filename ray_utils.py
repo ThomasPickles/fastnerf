@@ -50,6 +50,7 @@ def get_rays(directions, c2w):
     return rays_o, rays_d
 
 
+# Not used
 def get_ndc_rays(H, W, focal, near, rays_o, rays_d):
     """
     Transform rays from world coordinate to NDC.

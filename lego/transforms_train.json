@@ -1,5 +1,7 @@
 {
     "camera_angle_x": 0.6911112070083618,
+    "w": 800,
+    "h": 800,
     "frames": [
         {
             "file_path": "./images/r_0",

@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
 	h = args.px
 	dataset = args.dataset
-	c, w = get_params(dataset,h)
+	c, w, (near,far) = get_params(dataset,h)
 
 	# training_dataset = torch.from_numpy(np.load('training_data.pkl', allow_pickle=True))
 	training_dataset = BlenderDataset(dataset, img_wh=(w,h), n_chan=c)
@@ -59,22 +59,7 @@ if __name__ == '__main__':
 	model_optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
 	scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=[2, 4, 8], gamma=0.5)
 
-	# once we've got img size sorted, make sure we can get the digger rendered properly from
-	# blender style data; just a coarse rendering is fine for now
-
-	# with regularisation for white background, background px values are essentially [1,1,1] 
-
-	# TODO: white/black regularisation - what does this do?
-
-	# I think we have some issues with the scaling, since the jaw data fills the image
-	# completely, and yet the camera position is a really long way away.  Accordingly,
-	# the network is trying to treat it as really really big
-	
-	# NOTE: I think we're starting to get somewhere.  `test.py --dataset jaw` is really learning the grey effectively now.  Problems with small gradients due to depth of network?  Do we need such big neural nets?  Change rendering also 
-
-	# TODO: once all fixed, turn off specular
-	# TODO: near and far parameters?  are we cutting off most of the data because it's too far away?
 
 	data_loader = DataLoader(training_dataset, batch_size=1024, shuffle=True)
-	train(model, model_optimizer, scheduler, data_loader, nb_epochs=args.epochs, device=device, hn=2, hf=6)
+	train(model, model_optimizer, scheduler, data_loader, nb_epochs=args.epochs, device=device, hn=near, hf=far)
 	torch.save(model.state_dict(), args.snapshot)

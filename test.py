@@ -57,7 +57,7 @@ if __name__ == "__main__":
 	# del model
 
 	h = args.px
-	c, w = get_params(args.dataset,h)
+	c, w, (near,far) = get_params(args.dataset,h)
 
 	# this is a big dataset, and we can't load it all onto the gpu
 	# testing_dataset = torch.from_numpy(np.load('testing_data.pkl', allow_pickle=True)).to(device)
@@ -65,7 +65,8 @@ if __name__ == "__main__":
 
 	for img_index in range(4):
 		# NOTE: cache sends many pixel values to zero since it does aggressive masking
+		# cache seems to send white pixels to black with the lego.
 		if args.cache:
-			test(cache, 2., 6., testing_dataset, device=device, img_index=img_index, nb_bins=192, H=h, W=w)
+			test(cache, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=192, H=h, W=w)
 		else:
-			test(model, 2., 6., testing_dataset, device=device, img_index=img_index, nb_bins=192, H=h, W=w)
+			test(model, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=192, H=h, W=w)

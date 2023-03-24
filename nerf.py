@@ -3,7 +3,9 @@ import torch
 import torch.nn as nn
 
 class FastNerf(nn.Module):
-	def __init__(self, embedding_dim_pos=10, embedding_dim_direction=4, hidden_dim_pos=256, hidden_dim_dir=128, D=8):
+	# NOTE: currently it's a much smaller network, but it's certainly enough to show
+	# the shape of the objects.  At least, it works just fine for the lego
+	def __init__(self, embedding_dim_pos=10, embedding_dim_direction=4, hidden_dim_pos=64, hidden_dim_dir=32, D=8):
 		super(FastNerf, self).__init__()
 
 		self.Fpos = nn.Sequential(nn.Linear(embedding_dim_pos * 6 + 3, hidden_dim_pos), nn.ReLU(),
@@ -50,13 +52,13 @@ class Cache(nn.Module):
 			# Position
 			x, y, z = torch.meshgrid([torch.linspace(-scale / 2, scale / 2, Np).to(device),
 									  torch.linspace(-scale / 2, scale / 2, Np).to(device),
-									  torch.linspace(-scale / 2, scale / 2, Np).to(device)])
+									  torch.linspace(-scale / 2, scale / 2, Np).to(device)], indexing='ij')
 			xyz = torch.cat((x.reshape(-1, 1), y.reshape(-1, 1), z.reshape(-1, 1)), dim=1)
 			sigma_uvw = model.Fpos(model.positional_encoding(xyz, model.embedding_dim_pos))
 			self.sigma_uvw = sigma_uvw.reshape((Np, Np, Np, -1))
 			# Direction
 			xd, yd = torch.meshgrid([torch.linspace(-scale / 2, scale / 2, Nd).to(device),
-									 torch.linspace(-scale / 2, scale / 2, Nd).to(device)])
+									 torch.linspace(-scale / 2, scale / 2, Nd).to(device)], indexing='ij')
 			xyz_d = torch.cat((xd.reshape(-1, 1), yd.reshape(-1, 1),
 							   torch.sqrt((1 - xd ** 2 - yd ** 2).clip(0, 1)).reshape(-1, 1)), dim=1)
 			beta = model.Fdir(model.positional_encoding(xyz_d, model.embedding_dim_direction))
@@ -71,6 +73,8 @@ class Cache(nn.Module):
 		color = torch.zeros_like(x)
 		sigma = torch.zeros((x.shape[0], 1), device=x.device)
 
+		# TODO: watch this to understand what the masking is doing
+		# https://www.youtube.com/watch?v=1OsRruZmAaM
 		mask = (x[:, 0].abs() < (self.scale / 2)) & (x[:, 1].abs() < (self.scale / 2)) & (x[:, 2].abs() < (self.scale / 2))
 		# Position
 		idx = (x[mask] / (self.scale / self.Np) + self.Np / 2).long().clip(0, self.Np - 1)
