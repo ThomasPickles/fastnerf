@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from nerf import FastNerf, Cache
 from render import render_rays
 from convert_data import BlenderDataset
+from datasets import get_params
 
 @torch.no_grad()
 def test(model, hn, hf, dataset, device='cpu', img_index=0, nb_bins=192, H=400, W=400):
@@ -19,7 +20,8 @@ def test(model, hn, hf, dataset, device='cpu', img_index=0, nb_bins=192, H=400, 
 										nb_bins=nb_bins)
 
 	img_tensor = regenerated_px_values.data.cpu().numpy().reshape(H, W, 3)
-	print(f"middle row is {img_tensor[int(H/2),:,:]}")
+	print(f"Shape is {img_tensor.shape}")
+	# print(f"middle row is {img_tensor[int(H/2),:,:]}")
 	plt.figure()
 	plt.imshow(img_tensor.clip(0, 1))
 	plt.axis('off')
@@ -30,9 +32,10 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="Train model")
 
 	parser.add_argument("--epochs", type=int, default=8, help="The number of training epochs to run")
-	parser.add_argument("--px", type=int, default=40, help="The image size to train on")
+	parser.add_argument("--px", type=int, default=40, help="The image height to train on")
 	parser.add_argument("--dataset", default='lego', choices=['lego','jaw'])
 	parser.add_argument("--device", default='cpu', choices=['cuda','cpu'])
+	parser.add_argument("--snapshot", default='snapshot.pt', help="The name of the snapshot")
 	parser.add_argument("--cache", action='store_true', help="Runs the fast rendering algo")
 
 	return parser.parse_args()
@@ -46,22 +49,23 @@ if __name__ == "__main__":
 	# testing_dataset = torch.from_numpy(np.load('testing_data.pkl', allow_pickle=True))
 
 	model = FastNerf()
-	model.load_state_dict(torch.load(f"{dataset}.pt"))
+	model.load_state_dict(torch.load(args.snapshot))
 	model.eval()
 	model.to(device)
 
 	cache = Cache(model, 2.2, device, 96, 64).to(device)
 	# del model
 
-	# RGBA vs sRBA
-	n_channels = 4 if dataset == 'lego' else 3
+	h = args.px
+	c, w = get_params(args.dataset,h)
+
 	# this is a big dataset, and we can't load it all onto the gpu
 	# testing_dataset = torch.from_numpy(np.load('testing_data.pkl', allow_pickle=True)).to(device)
-	testing_dataset = BlenderDataset(dataset, split="test", img_wh=(px,px), n_chan=n_channels)
+	testing_dataset = BlenderDataset(dataset, split="test", img_wh=(w,h), n_chan=c)
 
 	for img_index in range(4):
 		# NOTE: cache sends many pixel values to zero since it does aggressive masking
 		if args.cache:
-			test(cache, 2., 6., testing_dataset, device=device, img_index=img_index, nb_bins=192, H=px, W=px)
+			test(cache, 2., 6., testing_dataset, device=device, img_index=img_index, nb_bins=192, H=h, W=w)
 		else:
-			test(model, 2., 6., testing_dataset, device=device, img_index=img_index, nb_bins=192, H=px, W=px)
+			test(model, 2., 6., testing_dataset, device=device, img_index=img_index, nb_bins=192, H=h, W=w)
