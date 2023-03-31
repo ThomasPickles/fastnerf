@@ -8,7 +8,7 @@
 #SBATCH --partition=gpu               
 
 #SBATCH --ntasks=1                    # Run a single task
-#SBATCH --mem=1600                    # Memory in MB per default
+#SBATCH --mem=32G                    # Memory in MB per default
 #SBATCH --time=0-02:00:00             # d-hh:mm:ss
 #SBATCH --gres=gpu:1
 
