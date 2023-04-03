@@ -12,6 +12,8 @@ from render import render_rays
 from datasets import get_params
 from helpers import linear_to_db
 
+# TODO: cross-validation of model params
+
 def train(nerf_model, optimizer, scheduler, data_loader, device, hn, hf, nb_epochs, nb_bins, loss_function):
 	training_loss_db = []
 	with tqdm(range(nb_epochs), desc="Epochs") as t:
@@ -44,6 +46,7 @@ def parse_args():
 	parser.add_argument("-d", "--encoding_dim", type=int, default=10, help="Number of hidden layers")
 	parser.add_argument("-n", "--neurons", type=int, default=132, help="Neurons per layer")
 	parser.add_argument("-s", "--samples", type=int, default=192, help="Number of samples per ray")
+	parser.add_argument("--lr", default=1e-4, type=float, help="Network learning rate")
 	parser.add_argument("--loss", default='L2', choices=['L2','Huber','L1'], help="Loss function")
 	parser.add_argument("--height", "--px", type=int, default=150, help="Compressed image height")
 	parser.add_argument("--batchsize", type=int, default=1024, help="Number of training steps before update params")
@@ -69,7 +72,7 @@ if __name__ == '__main__':
 
 	model = FastNerf(args.encoding_dim, args.layers, args.neurons).to(device)
 
-	model_optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
+	model_optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 	scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=[2, 4, 8], gamma=0.5)
 	data_loader = DataLoader(training_dataset, batch_size=args.batchsize, shuffle=True)
 	if args.loss == 'L2':
@@ -95,6 +98,7 @@ if __name__ == '__main__':
 			"img_size": h,
 			"rendering": "astra",
 			"samples": args.samples,
+			"lr": args.lr,
 			"batchsize": args.batchsize,
 			"loss": args.loss,
 			"run_time": format(training_time, ".2f"),

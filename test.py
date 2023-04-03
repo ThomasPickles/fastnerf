@@ -35,17 +35,17 @@ def batch_test(model, hn, hf, dataset, device, img_index, nb_bins, H, W):
 	gt = img[...,6:].squeeze(0)
 	diff = (gt - img_tensor).abs()
 	loss = (diff ** 2).mean() # probably not the best measure, we want peak
-	print(f"Writing images..., test loss = {linear_to_db(loss):.2f} dB")
-	imgs = [img_tensor.data.cpu().numpy().reshape(H, W, 3),gt.data.cpu().numpy().reshape(H, W, 3),diff.data.cpu().numpy().reshape(H, W, 3)]
-	write_imgs(imgs, f'novel_views/img_{img_index}.png')
+	test_loss = linear_to_db(loss)
+	return test_loss, [img_tensor.data.cpu().numpy().reshape(H, W, 3),gt.data.cpu().numpy().reshape(H, W, 3),diff.data.cpu().numpy().reshape(H, W, 3)]
+	
 
 def parse_args():
 	parser = argparse.ArgumentParser(description="Train model")
 
 	parser.add_argument("checkpoint", help="The id of the snapshot")
-	parser.add_argument("--px", type=int, default=40, help="The image height to train on")
+	# parser.add_argument("--px", type=int, default=40, help="The image height to train on")
 	# parser.add_argument("--dataset", default='jaw', choices=['lego','jaw'])
-	# parser.add_argument("--device", default='cpu', choices=['cuda','cpu'])
+	parser.add_argument("--device", default='cpu', choices=['cuda','cpu'])
 	parser.add_argument("--cache", action='store_true', help="Runs the fast rendering algo")
 	
 	return parser.parse_args()
@@ -54,6 +54,7 @@ if __name__ == "__main__":
 	args = parse_args()
 
 	filename = args.checkpoint
+	basename = re.split('\W',filename)[1] # HACK 
 	snapshot = re.sub('json','pt',filename) 
 	with open(filename, 'r') as jsonfile:
 		params_dict = json.load(jsonfile)
@@ -63,11 +64,15 @@ if __name__ == "__main__":
 	neurons =  params_dict['model']['hidden_dim']
 	embed_dim =  params_dict['model']['embedding_dim']
 	epochs = params_dict["epochs"]
+	lr = params_dict.get("lr")
 	img_size = params_dict["img_size"]
 	rendering = params_dict["rendering"]
 	samples = params_dict["samples"]
+	loss = params_dict["loss"]
+	final_training_loss_db = params_dict["final_training_loss_db"]
+	curve = params_dict["training_loss"]
 
-	device = 'cpu'
+	device = args.device
 	dataset = 'jaw' # args.dataset
 
 	model = FastNerf(embed_dim, layers, neurons)
@@ -92,4 +97,6 @@ if __name__ == "__main__":
 		if args.cache:
 			test(cache, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples, H=h, W=w)
 		else:
-			batch_test(model, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples	, H=h, W=w)
+			test_loss, imgs = batch_test(model, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples	, H=h, W=w)
+			text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}"
+			write_imgs((imgs,curve), f'novel_views/img_{basename}_{img_index}.png', text)
