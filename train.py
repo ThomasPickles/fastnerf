@@ -14,6 +14,9 @@ from helpers import linear_to_db
 
 # TODO: cross-validation of model params
 
+def ExpLoss(output, target):
+	return torch.pow(torch.exp(output) - torch.exp(target), 2.).mean()
+
 def train(nerf_model, optimizer, scheduler, data_loader, device, hn, hf, nb_epochs, nb_bins, loss_function):
 	training_loss_db = []
 	with tqdm(range(nb_epochs), desc="Epochs") as t:
@@ -47,7 +50,7 @@ def parse_args():
 	parser.add_argument("-n", "--neurons", type=int, default=132, help="Neurons per layer")
 	parser.add_argument("-s", "--samples", type=int, default=192, help="Number of samples per ray")
 	parser.add_argument("--lr", default=1e-4, type=float, help="Network learning rate")
-	parser.add_argument("--loss", default='L2', choices=['L2','Huber','L1'], help="Loss function")
+	parser.add_argument("--loss", default='L2', choices=['L2','Huber','L1','Exp'], help="Loss function")
 	parser.add_argument("--height", "--px", type=int, default=150, help="Compressed image height")
 	parser.add_argument("--batchsize", type=int, default=1024, help="Number of training steps before update params")
 	parser.add_argument("--dataset", default='jaw', choices=['lego','jaw'])
@@ -81,6 +84,8 @@ if __name__ == '__main__':
 		loss_function = nn.HuberLoss()
 	elif args.loss == 'L1':
 		loss_function = nn.L1Loss()
+	elif args.loss == 'Exp':
+		loss_function = ExpLoss
 	else:
 		print('Loss not implemented')
 		exit
