@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
-import os
+from pathlib import Path
 
 import json, re
 from nerf import FastNerf, Cache
@@ -15,29 +15,44 @@ from datasets import get_params
 from helpers import *
 
 @torch.no_grad()
-def batch_test(model, hn, hf, dataset, device, img_index, nb_bins, H, W):
-	
-	# TODO: only need a single value (sigma) to be returned from render_rays
-	img = dataset[img_index]
-	img_tensor = torch.zeros_like(img[...,6:])
+def get_ray_alpha(model, hn, hf, dataset, device, img_index, nb_bins, H, W):
+	pass
+
+def render_image(view, **params):
+	img_tensor = torch.zeros_like(view[...,6:])
 	n_batches = 5
+	device = params["device"]
+	H = params["H"]
+	W = params["W"]
+	hf = params["hf"]
+	hn = params["hn"]
+	nb_bins = params["nb_bins"]
+
 	assert H % n_batches == 0, 'not yet dealing with unequal batches' 
 	batch_size = int(H*W / n_batches)
 	# TODO: vectorise this for loop somehow with better batching?
 	for i in range(n_batches):
 		i_start, i_end = i*batch_size, (i+1)*batch_size
-		batch = img[i_start:i_end,...]
+		batch = view[i_start:i_end,...]
 		ray_origins = batch[...,:3].squeeze(0).to(device)
 		ray_directions = batch[...,3:6].squeeze(0).to(device)
 		# this operation is runs out of memory, hence for loop
 		regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
 		img_tensor[i_start:i_end,...] = regenerated_px_values
+	return img_tensor
 
-	gt = img[...,6:].squeeze(0)
+
+@torch.no_grad()
+def batch_test(model, dataset, img_index, **render_params):
+	# TODO: only need a single value (sigma) to be returned from render_rays
+	view = dataset[img_index]
+	img_tensor = render_image(view, **render_params)
+
+	gt = view[...,6:].squeeze(0)
 	diff = (gt - img_tensor).abs()
 	loss = (diff ** 2).mean() # probably not the best measure, we want peak
 	test_loss = linear_to_db(loss)
-	return test_loss, [img_tensor.data.cpu().numpy().reshape(H, W, 3),gt.data.cpu().numpy().reshape(H, W, 3),diff.data.cpu().numpy().reshape(H, W, 3)]
+	return test_loss, [img_tensor,gt,diff]
 	
 
 def parse_args():
@@ -55,7 +70,7 @@ if __name__ == "__main__":
 	args = parse_args()
 
 	filename = args.checkpoint
-	basename = os.path.basename(filename) 
+	basename = Path(filename).stem 
 	snapshot = re.sub('json','pt',filename) 
 	with open(filename, 'r') as jsonfile:
 		params_dict = json.load(jsonfile)
@@ -72,6 +87,14 @@ if __name__ == "__main__":
 	loss = params_dict["loss"]
 	final_training_loss_db = params_dict["final_training_loss_db"]
 	curve = params_dict["training_loss"]
+
+	if epochs < 20:
+		print("Not fully trained.  Skipping file...")
+		exit()
+	
+	if lr == None:
+		print("No learning rate.  Skipping file...")
+		exit()
 
 	device = args.device
 	dataset = 'jaw' # args.dataset
@@ -98,6 +121,7 @@ if __name__ == "__main__":
 		if args.cache:
 			test(cache, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples, H=h, W=w)
 		else:
-			test_loss, imgs = batch_test(model, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples	, H=h, W=w)
+			test_loss, imgs = batch_test(model, testing_dataset, img_index, hn=near, hf=far, device=device, nb_bins=samples, H=h, W=w)
+			cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
 			text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}"
-			write_imgs((imgs,curve), f'novel_views/img_{basename}_{img_index}.png', text)
+			write_imgs((cpu_imgs,curve), f'novel_views/img_{basename}_{img_index}.png', text)
