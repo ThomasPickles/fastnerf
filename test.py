@@ -18,17 +18,12 @@ from helpers import *
 def get_ray_alpha(model, dataset, img_index, hn, hf, device, nb_bins, H, W):
 	view = dataset[img_index]
 	ray_ids = torch.randint(0, H*W, (5,))
-	print(f"ray_ids: {ray_ids.shape}")
 	ray_origins = view[ray_ids,:3].squeeze(0).to(device)
-	print(f"ray_origins: {ray_origins.shape}")
 	ray_directions = view[ray_ids,3:6].squeeze(0).to(device)
 	sigma, _, delta = get_sigma_values(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
 	weights = sigma*delta
 	weights = weights[:,:-1].transpose(0,1)
-	print(f"weights: {weights.shape}")
-	fig, ax = plt.subplots()  # Create a figure containing a single axes.
-	ax.plot(weights)  # Plot some data on the axes.
-	plt.show()
+	return weights
 
 def render_image(view, **params):
 	img_tensor = torch.zeros_like(view[...,6:])
@@ -126,14 +121,14 @@ if __name__ == "__main__":
 	testing_dataset = BlenderDataset(dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
 	# data_loader = DataLoader(testing_dataset, batch_size=100)
 
-	for img_index in range(1):
+	for img_index in range(4):
 		# NOTE: cache sends many pixel values to zero since it does aggressive masking
 		# cache seems to send white pixels to black with the lego.
 		if args.cache:
 			test(cache, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples, H=h, W=w)
 		else:
-			# get_ray_alpha(model, testing_dataset, img_index, hn=near, hf=far, device=device, nb_bins=samples, H=h, W=w)
 			test_loss, imgs = batch_test(model, testing_dataset, img_index, hn=near, hf=far, device=device, nb_bins=samples, H=h, W=w)
+			weights = get_ray_alpha(model, testing_dataset, img_index, hn=near, hf=far, device=device, nb_bins=samples, H=h, W=w)
 			cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
 			text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}"
-			write_imgs((cpu_imgs,curve), f'novel_views/img_{basename}_{img_index}.png', text)
+			write_imgs((cpu_imgs,curve, weights), f'novel_views/img_{basename}_{img_index}.png', text)

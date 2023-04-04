@@ -4,15 +4,9 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 import matplotlib.gridspec as gridspec
 
 def write_imgs(data, path, title=None):
-	fig = plt.figure(figsize=(40., 10.))
-	# fig = plt.figure(tight_layout=True)
-	gs = gridspec.GridSpec(1, 5)
-	# grid = ImageGrid(fig, 111,
-	# 			 nrows_ncols=(1, 4),
-	# 			 axes_pad=0.1,  # pad between axes in inch.
-	# 			 aspect = True
-	# 			 )
-	imgs, curve = data
+	fig = plt.figure(tight_layout=True, figsize=(40., 20.))
+	gs = gridspec.GridSpec(2, 4)
+	imgs, curve, rays = data
 
 	# images
 	for i, sub_tit in enumerate(["out","ref","diff"]):
@@ -21,10 +15,14 @@ def write_imgs(data, path, title=None):
 		ax.set_title(sub_tit)
 
 	# curve
-	ax = fig.add_subplot(gs[0, 3:5])
+	ax = fig.add_subplot(gs[1, :])
 	ax.plot(curve)
 	ax.set_ylabel('dB')
 	ax.invert_yaxis()
+
+	# ray
+	ax = fig.add_subplot(gs[0, 3])
+	ax.plot(rays)
 
 	fig.suptitle(title, fontsize=16)
 	plt.savefig(path, bbox_inches='tight')
