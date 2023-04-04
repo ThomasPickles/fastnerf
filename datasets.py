@@ -7,6 +7,6 @@ def get_params(d, h):
         # sRBA
         aspect_ratio = 275/331
         # angle of view
-        near = 163 - 75 # camera is on a circle 163 from origin at (x,y,0)
-        far = 163 + 75 # 50 is approx
+        near = 163 - 100 # camera is on a circle 163 from origin at (x,y,0)
+        far = 163 + 100 # 50 is approx
         return 3, int(h*aspect_ratio), (near,far)
