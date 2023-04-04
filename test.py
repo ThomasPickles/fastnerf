@@ -9,14 +9,26 @@ from pathlib import Path
 
 import json, re
 from nerf import FastNerf, Cache
-from render import render_rays
+from render import render_rays, get_sigma_values
 from convert_data import BlenderDataset
 from datasets import get_params
 from helpers import *
 
 @torch.no_grad()
-def get_ray_alpha(model, hn, hf, dataset, device, img_index, nb_bins, H, W):
-	pass
+def get_ray_alpha(model, dataset, img_index, hn, hf, device, nb_bins, H, W):
+	view = dataset[img_index]
+	ray_ids = torch.randint(0, H*W, (5,))
+	print(f"ray_ids: {ray_ids.shape}")
+	ray_origins = view[ray_ids,:3].squeeze(0).to(device)
+	print(f"ray_origins: {ray_origins.shape}")
+	ray_directions = view[ray_ids,3:6].squeeze(0).to(device)
+	sigma, _, delta = get_sigma_values(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
+	weights = sigma*delta
+	weights = weights[:,:-1].transpose(0,1)
+	print(f"weights: {weights.shape}")
+	fig, ax = plt.subplots()  # Create a figure containing a single axes.
+	ax.plot(weights)  # Plot some data on the axes.
+	plt.show()
 
 def render_image(view, **params):
 	img_tensor = torch.zeros_like(view[...,6:])
@@ -30,7 +42,6 @@ def render_image(view, **params):
 
 	assert H % n_batches == 0, 'not yet dealing with unequal batches' 
 	batch_size = int(H*W / n_batches)
-	# TODO: vectorise this for loop somehow with better batching?
 	for i in range(n_batches):
 		i_start, i_end = i*batch_size, (i+1)*batch_size
 		batch = view[i_start:i_end,...]
@@ -88,13 +99,13 @@ if __name__ == "__main__":
 	final_training_loss_db = params_dict["final_training_loss_db"]
 	curve = params_dict["training_loss"]
 
-	if epochs < 20:
-		print("Not fully trained.  Skipping file...")
-		exit()
+	# if epochs < 20:
+	# 	print("Not fully trained.  Skipping file...")
+	# 	exit()
 	
-	if lr == None:
-		print("No learning rate.  Skipping file...")
-		exit()
+	# if lr == None:
+	# 	print("No learning rate.  Skipping file...")
+	# 	exit()
 
 	device = args.device
 	dataset = 'jaw' # args.dataset
@@ -112,15 +123,16 @@ if __name__ == "__main__":
 
 	# this is a big dataset, and we can't load it all onto the gpu
 	# testing_dataset = torch.from_numpy(np.load('testing_data.pkl', allow_pickle=True)).to(device)
-	testing_dataset = BlenderDataset(dataset, 'transforms_full', split="test", img_wh=(w,h), n_chan=c)
+	testing_dataset = BlenderDataset(dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
 	# data_loader = DataLoader(testing_dataset, batch_size=100)
 
-	for img_index in range(4):
+	for img_index in range(1):
 		# NOTE: cache sends many pixel values to zero since it does aggressive masking
 		# cache seems to send white pixels to black with the lego.
 		if args.cache:
 			test(cache, near, far, testing_dataset, device=device, img_index=img_index, nb_bins=samples, H=h, W=w)
 		else:
+			# get_ray_alpha(model, testing_dataset, img_index, hn=near, hf=far, device=device, nb_bins=samples, H=h, W=w)
 			test_loss, imgs = batch_test(model, testing_dataset, img_index, hn=near, hf=far, device=device, nb_bins=samples, H=h, W=w)
 			cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
 			text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}"

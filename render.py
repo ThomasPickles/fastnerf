@@ -5,7 +5,7 @@ def compute_accumulated_transmittance(alphas):
 	return torch.cat((torch.ones((accumulated_transmittance.shape[0], 1), device=alphas.device),
 					  accumulated_transmittance[:, :-1]), dim=-1)
 
-def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volumetric, regularise=False):
+def get_sigma_values(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volumetric, regularise=False):
 	device = ray_origins.device
 	t = torch.linspace(hn, hf, nb_bins, device=device).expand(ray_origins.shape[0], nb_bins)
 	# Perturb sampling along each ray.
@@ -21,7 +21,12 @@ def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volume
 	colors, sigma = nerf_model(x.reshape(-1, 3), ray_directions.reshape(-1, 3))
 	colors = colors.reshape(x.shape)
 	sigma = sigma.reshape(x.shape[:-1])
+	return sigma, colors, delta
 
+def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volumetric, regularise=False):
+	sigma, colors, delta = get_sigma_values(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volumetric, regularise)
+
+	# accumulate
 	if volumetric:
 		alpha = 1 - torch.exp(-sigma * delta)  # [batch_size, nb_bins]
 		weights = compute_accumulated_transmittance(1 - alpha).unsqueeze(2) * alpha.unsqueeze(2)

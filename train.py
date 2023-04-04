@@ -47,7 +47,7 @@ def parse_args():
 	parser.add_argument("-e", "--epochs", type=int, default=2, help="The number of training epochs to run")
 	parser.add_argument("-l", "--layers", type=int, default=8, help="Number of hidden layers")
 	parser.add_argument("-d", "--encoding_dim", type=int, default=10, help="Number of hidden layers")
-	parser.add_argument("-n", "--neurons", type=int, default=132, help="Neurons per layer")
+	parser.add_argument("-n", "--neurons", type=int, default=384, help="Neurons per layer")
 	parser.add_argument("-s", "--samples", type=int, default=192, help="Number of samples per ray")
 	parser.add_argument("--lr", default=1e-4, type=float, help="Network learning rate")
 	parser.add_argument("--loss", default='L2', choices=['L2','Huber','L1','Exp'], help="Loss function")
@@ -55,7 +55,7 @@ def parse_args():
 	parser.add_argument("--batchsize", type=int, default=1024, help="Number of training steps before update params")
 	parser.add_argument("--dataset", default='jaw', choices=['lego','jaw'])
 	parser.add_argument("--device", default='cuda', choices=['cuda','cpu'])
-	parser.add_argument("--file", default='transforms_full')
+	parser.add_argument("--file", default='transforms_full_b')
 
 	return parser.parse_args()
 
