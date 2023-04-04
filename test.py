@@ -5,6 +5,7 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import os
 
 import json, re
 from nerf import FastNerf, Cache
@@ -54,7 +55,7 @@ if __name__ == "__main__":
 	args = parse_args()
 
 	filename = args.checkpoint
-	basename = re.split('\W',filename)[1] # HACK 
+	basename = os.path.basename(filename) 
 	snapshot = re.sub('json','pt',filename) 
 	with open(filename, 'r') as jsonfile:
 		params_dict = json.load(jsonfile)
