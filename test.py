@@ -25,7 +25,7 @@ def get_ray_alpha(model, dataset, img_index, hn, hf, device, nb_bins, H, W):
 	weights = weights[:,:-1].transpose(0,1)
 	return weights
 
-def render_image(view, **params):
+def render_image(model, view, **params):
 	img_tensor = torch.zeros_like(view[...,6:])
 	n_batches = 5
 	device = params["device"]
@@ -52,7 +52,7 @@ def render_image(view, **params):
 def batch_test(model, dataset, img_index, **render_params):
 	# TODO: only need a single value (sigma) to be returned from render_rays
 	view = dataset[img_index]
-	img_tensor = render_image(view, **render_params)
+	img_tensor = render_image(model, view, **render_params)
 
 	gt = view[...,6:].squeeze(0)
 	diff = (gt - img_tensor).abs()
@@ -94,13 +94,13 @@ if __name__ == "__main__":
 	final_training_loss_db = params_dict["final_training_loss_db"]
 	curve = params_dict["training_loss"]
 
-	# if epochs < 20:
-	# 	print("Not fully trained.  Skipping file...")
-	# 	exit()
+	if epochs < 20:
+		print("Not fully trained.  Skipping file...")
+		exit()
 	
-	# if lr == None:
-	# 	print("No learning rate.  Skipping file...")
-	# 	exit()
+	if lr == None:
+		print("No learning rate.  Skipping file...")
+		exit()
 
 	device = args.device
 	dataset = 'jaw' # args.dataset

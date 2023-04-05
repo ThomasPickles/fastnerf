@@ -100,7 +100,7 @@ class BlenderDataset(Dataset):
     def __getitem__(self, idx):
         if (self.split == 'train'):
             return self.data[idx]
-        if self.split == 'test':
+        if ((self.split == 'test') or (self.split == 'video')):
             rays_o, rays_d, img = self.process_frame(self.meta['frames'][idx])
             rays = torch.cat([rays_o, rays_d, img],1)
             return rays

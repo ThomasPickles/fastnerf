@@ -26,6 +26,7 @@ def write_imgs(data, path, title=None):
 
 	fig.suptitle(title, fontsize=16)
 	plt.savefig(path, bbox_inches='tight')
+	print(f"Image written to {path}")
 	plt.close()
 
 def write_img(img, path):
