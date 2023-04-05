@@ -94,10 +94,9 @@ if __name__ == '__main__':
 	with open(f"checkpoints/{checkpoint}.json", 'w') as jsonfile:
 		json.dump(params_dict, jsonfile, default=lambda o: o.__dict__)
 	
-	print(f"Run {checkpoint} complete with results {json.dumps(params_dict)} and written to run.log")
 	snapshot_path = f"checkpoints/{checkpoint}.pt"
 	torch.save(model.state_dict(), snapshot_path)
-	print(f"Trained model weights saved as checkpoints/{checkpoint}.pt")
+	print(f"Training complete. Model weights saved as checkpoints/{checkpoint}.pt")
 
 	# TODO: do we need intermediate read?
 	with open(f"checkpoints/{checkpoint}.json", 'r') as jsonfile:
@@ -153,7 +152,3 @@ if __name__ == '__main__':
 			write_img(img, f'video/img_{checkpoint}_{img_index:03}.png')
 		sys_command = f"ffmpeg -i video/img_{checkpoint}_%03d.png video/vid_{epochs}_{img_size}_{layers}.mp4"
 		os.system(sys_command)
-
-
-
-

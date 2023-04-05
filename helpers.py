@@ -23,6 +23,7 @@ def write_imgs(data, path, title=None):
 	# ray
 	ax = fig.add_subplot(gs[0, 3])
 	ax.plot(rays)
+	ax.set_title("density along rays")
 
 	fig.suptitle(title, fontsize=16)
 	plt.savefig(path, bbox_inches='tight')

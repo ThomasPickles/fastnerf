@@ -7,10 +7,10 @@ def compute_accumulated_transmittance(alphas):
 
 def get_points_in_slice(z0,device):
 	# initially z=0 slice
-	z = torch.tensor([z0], device=device).expand(10000)
 	xs = torch.linspace(-50, 50, steps=100, device=device)
 	x,y = torch.meshgrid(xs, xs, indexing='xy')
-	r = torch.stack([x,y,torch.zeros_like(x)],dim=2).reshape(-1, 3)
+	z = torch.tensor([z0], device=device).expand(10000).reshape(x.shape)
+	r = torch.stack([x,y,z],dim=2).reshape(-1, 3)
 	return r #[10000, 3]
 
 def get_points_along_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volumetric, regularise=False):
