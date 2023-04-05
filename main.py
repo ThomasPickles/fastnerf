@@ -133,8 +133,8 @@ if __name__ == '__main__':
 			MAX_BRIGHTNESS = 2.5
 			img = render_slice(model=trained_model, z=z, device=args.test_device)
 			img = img.data.cpu().numpy().reshape(100, 100, 3)/MAX_BRIGHTNESS
-			write_img(img, f'slices/img_{checkpoint}_{z:03}.png')
-		sys_command = f"ffmpeg -r 5 -i slices/img_{checkpoint}_%03d.png video/slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
+			write_img(img, f'tmp/slice_{checkpoint}_{z:03}.png')
+		sys_command = f"ffmpeg -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
 
 	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 		weights = get_ray_alpha(trained_model, testing_dataset, img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 		cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
 		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}, training time (s): {training_time:.2f}"
-		write_imgs((cpu_imgs,curve, weights.data.cpu()), f'novel_views/img_{checkpoint}_{img_index}.png', text)
+		write_imgs((cpu_imgs,curve, weights.data.cpu()), f'out/{checkpoint}_loss_{img_index}.png', text)
 
 	if args.video:
 		video_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="video", img_wh=(w,h), n_chan=c)
@@ -152,6 +152,6 @@ if __name__ == '__main__':
 		for img_index in range(720):
 			_, imgs = batch_test(model=trained_model, dataset=video_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 			img = imgs[0].data.cpu().numpy().reshape(h, w, 3)
-			write_img(img, f'video/img_{checkpoint}_{img_index:03}.png')
-		sys_command = f"ffmpeg -i video/img_{checkpoint}_%03d.png video/rotate_{epochs}_{img_size}_{layers}_{neurons}.mp4"
+			write_img(img, f'tmp/rot_{checkpoint}_{img_index:03}.png')
+		sys_command = f"ffmpeg -i tmp/rot_{checkpoint}_%03d.png out/{checkpoint}_rotate_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
