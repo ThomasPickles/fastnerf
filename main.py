@@ -11,7 +11,7 @@ from convert_data import BlenderDataset
 from nerf import FastNerf
 from datasets import get_params
 from helpers import linear_to_db
-from test import batch_test, get_ray_alpha
+from test import batch_test, get_ray_alpha, render_slice
 from train import train
 from helpers import *
 
@@ -32,6 +32,7 @@ def parse_args():
 	parser.add_argument("--test_device", default='cpu', choices=['cuda','cpu'])
 	parser.add_argument("--file", default='transforms_full_b')
 	parser.add_argument("--video", action='store_true', help="Outputs video")
+	parser.add_argument("--slice", action='store_true', help="Outputs slice")
 
 
 	return parser.parse_args()
@@ -128,6 +129,12 @@ if __name__ == '__main__':
 	trained_model.load_state_dict(torch.load(snapshot_path))
 	trained_model.eval()
 	trained_model.to(args.test_device)
+
+	if args.slice:
+		for z in [0,10,20,30,40,50,60,70]:
+			img = render_slice(model=trained_model, z=z, device=args.test_device)
+			img = img.data.cpu().numpy().reshape(100, 100, 3)
+			write_img(img, f'slices/img_{checkpoint}_{z:.0f}.png')
 
 	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
 

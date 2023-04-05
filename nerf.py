@@ -53,7 +53,7 @@ class FastNerf(nn.Module):
 			out.append(torch.cos(2 ** j * x))
 		return torch.cat(out, dim=1)
 
-	def forward(self, o, d):
+	def forward(self, o):
 		# o: [batchsize * nb_bins,3]
 		# d: [batchsize * nb_bins,3]
 		sigma_uvw = self.Fpos(self.positional_encoding(o, self.embedding_dim))
@@ -65,9 +65,9 @@ class FastNerf(nn.Module):
 		# uvw = torch.sigmoid(sigma_uvw[:, 1:].reshape(-1, 3, self.D))  # [batch_size, 3, D]
 		# beta = torch.softmax(self.Fdir(self.positional_encoding(d, self.embedding_dim_direction)), -1)
 		# color = (beta.unsqueeze(1) * uvw).sum(-1)  # [batch_size, 3]
-		color = sigma.expand(-1,3)
+		# color = sigma.expand(-1,3)
 
-		return color, sigma
+		return sigma
 
 
 
