@@ -34,7 +34,6 @@ def parse_args():
 	parser.add_argument("--video", action='store_true', help="Outputs video")
 	parser.add_argument("--slice", action='store_true', help="Outputs slice")
 
-
 	return parser.parse_args()
 
 if __name__ == '__main__':
@@ -143,7 +142,7 @@ if __name__ == '__main__':
 		weights = get_ray_alpha(trained_model, testing_dataset, img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 		cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
 		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}"
-		write_imgs((cpu_imgs,curve, weights), f'novel_views/img_{checkpoint}_{img_index}.png', text)
+		write_imgs((cpu_imgs,curve, weights.data.cpu()), f'novel_views/img_{checkpoint}_{img_index}.png', text)
 
 	if args.video:
 		video_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="video", img_wh=(w,h), n_chan=c)
