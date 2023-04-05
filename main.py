@@ -129,11 +129,13 @@ if __name__ == '__main__':
 	trained_model.to(args.test_device)
 
 	if args.slice:
-		for z in [0,10,20,30,40,50,60,70]:
+		for z in range(75):
 			MAX_BRIGHTNESS = 2.5
 			img = render_slice(model=trained_model, z=z, device=args.test_device)
 			img = img.data.cpu().numpy().reshape(100, 100, 3)/MAX_BRIGHTNESS
-			write_img(img, f'slices/img_{checkpoint}_{z:.0f}.png')
+			write_img(img, f'slices/img_{checkpoint}_{z:03}.png')
+		sys_command = f"ffmpeg -i slices/img_{checkpoint}_%03d.png video/slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
+		os.system(sys_command)
 
 	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
 
@@ -151,5 +153,5 @@ if __name__ == '__main__':
 			_, imgs = batch_test(model=trained_model, dataset=video_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 			img = imgs[0].data.cpu().numpy().reshape(h, w, 3)
 			write_img(img, f'video/img_{checkpoint}_{img_index:03}.png')
-		sys_command = f"ffmpeg -i video/img_{checkpoint}_%03d.png video/vid_{epochs}_{img_size}_{layers}.mp4"
+		sys_command = f"ffmpeg -i video/img_{checkpoint}_%03d.png video/rotate_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
