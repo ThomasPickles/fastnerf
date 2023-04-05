@@ -143,7 +143,7 @@ if __name__ == '__main__':
 		test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 		weights = get_ray_alpha(trained_model, testing_dataset, img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 		cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
-		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}"
+		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}, training time (s): {training_time:.2f}"
 		write_imgs((cpu_imgs,curve, weights.data.cpu()), f'novel_views/img_{checkpoint}_{img_index}.png', text)
 
 	if args.video:
