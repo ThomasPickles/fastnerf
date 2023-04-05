@@ -148,7 +148,7 @@ if __name__ == '__main__':
 		video_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="video", img_wh=(w,h), n_chan=c)
 
 		for img_index in range(720):
-			_, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
+			_, imgs = batch_test(model=trained_model, dataset=video_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 			img = imgs[0].data.cpu().numpy().reshape(h, w, 3)
 			write_img(img, f'video/img_{checkpoint}_{img_index:03}.png')
 		sys_command = f"ffmpeg -i video/img_{checkpoint}_%03d.png video/vid_{epochs}_{img_size}_{layers}.mp4"
