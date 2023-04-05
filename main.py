@@ -130,8 +130,9 @@ if __name__ == '__main__':
 
 	if args.slice:
 		for z in [0,10,20,30,40,50,60,70]:
+			MAX_BRIGHTNESS = 2.5
 			img = render_slice(model=trained_model, z=z, device=args.test_device)
-			img = img.data.cpu().numpy().reshape(100, 100, 3)
+			img = img.data.cpu().numpy().reshape(100, 100, 3)/MAX_BRIGHTNESS
 			write_img(img, f'slices/img_{checkpoint}_{z:.0f}.png')
 
 	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
