@@ -8,8 +8,8 @@
 #SBATCH --partition=gpu               
 
 #SBATCH --ntasks=1                    # Run a single task
-#SBATCH --mem=32G                    # Memory in MB per default
-#SBATCH --time=0-12:00:00             # d-hh:mm:ss
+#SBATCH --mem=16G                    # Memory in MB per default
+#SBATCH --time=0-01:00:00             # d-hh:mm:ss
 #SBATCH --gres=gpu:1
 
 #SBATCH --mail-user=tpickles@liris.cnrs.fr   # Where to send mail
@@ -18,10 +18,5 @@
 # Commands to be submitted:
 module load python
 pip install --user -r requirements.txt
-python train.py --px 275 --epochs 10 --loss L2
-python train.py --px 275 --epochs 10 --loss L1
-python train.py --px 275 --epochs 10 --loss Huber
-python train.py --px 275 --epochs 10 --layers 4
-python train.py --px 275 --epochs 10 --layers 4 --loss L2
-python train.py --px 275 --epochs 10 --layers 4 --loss L1
-python train.py --px 275 --epochs 10 --layers 4 --loss Huber
+
+python main.py --px 125 --epochs 10 --lr 0.00005 --neurons 132 --video --slice --test_device cuda
