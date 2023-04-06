@@ -30,12 +30,13 @@ def write_imgs(data, path, title=None):
 	print(f"Image written to {path}")
 	plt.close()
 
-def write_img(img, path):
+def write_img(img, path, verbose=True):
 	plt.figure(figsize=(10., 10.))
 	plt.imshow(img)
 	plt.axis('off')
 	plt.savefig(path, bbox_inches='tight')
-	print(f"Image written to {path}")
+	if verbose:
+		print(f"Image written to {path}")
 	plt.close()
 
 def linear_to_db(x):

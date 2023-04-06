@@ -142,7 +142,7 @@ if __name__ == '__main__':
 			MAX_BRIGHTNESS = 2.5
 			img = render_slice(model=trained_model, z=z, device=args.test_device)
 			img = img.data.cpu().numpy().reshape(100, 100, 3)/MAX_BRIGHTNESS
-			write_img(img, f'tmp/slice_{checkpoint}_{z:03}.png')
+			write_img(img, f'tmp/slice_{checkpoint}_{z:03}.png', verbose=False)
 		sys_command = f"ffmpeg -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
 
@@ -161,6 +161,6 @@ if __name__ == '__main__':
 		for img_index in range(720):
 			_, imgs = batch_test(model=trained_model, dataset=video_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 			img = imgs[0].data.cpu().numpy().reshape(h, w, 3)
-			write_img(img, f'tmp/rot_{checkpoint}_{img_index:03}.png')
+			write_img(img, f'tmp/rot_{checkpoint}_{img_index:03}.png', verbose=False)
 		sys_command = f"ffmpeg -i tmp/rot_{checkpoint}_%03d.png out/{checkpoint}_rotate_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
