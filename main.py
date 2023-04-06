@@ -24,6 +24,8 @@ def parse_args():
 	parser.add_argument("-n", "--neurons", type=int, default=384, help="Neurons per layer")
 	parser.add_argument("-s", "--samples", type=int, default=192, help="Number of samples per ray")
 	parser.add_argument("--lr", default=1e-4, type=float, help="Network learning rate")
+	parser.add_argument("--noise", default=1e-1, type=float, help="Gaussian noise level to apply to training images")
+	parser.add_argument("--noise_sd", default=128, type=float, help="Gaussian noise level to apply to training images")
 	parser.add_argument("--loss", default='L2', choices=['L2','Huber','L1','Exp'], help="Loss function")
 	parser.add_argument("--height", "--px", type=int, default=150, help="Compressed image height")
 	parser.add_argument("--batchsize", type=int, default=1024, help="Number of training steps before update params")
@@ -48,7 +50,13 @@ if __name__ == '__main__':
 
 	c, w, (near,far) = get_params(args.dataset,h)
 
-	training_dataset = BlenderDataset(args.dataset, args.file, split="train", img_wh=(w,h), n_chan=c)
+	checkpoint = uuid.uuid4().hex[0:10]
+
+	training_dataset = BlenderDataset(args.dataset, args.file, split="train", img_wh=(w,h), n_chan=c, noise_level=args.noise, noise_sd=args.noise_sd)
+	training_im = training_dataset[:w*h,6:]
+	print(training_im.shape)
+	write_img(training_im.reshape(h, w, 3), f"out/{checkpoint}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
+	exit()
 
 	model = FastNerf(args.encoding_dim, args.layers, args.neurons).to(device)
 
@@ -71,7 +79,9 @@ if __name__ == '__main__':
 	training_loss = train(model, model_optimizer, scheduler, data_loader, nb_epochs=args.epochs, device=device, hn=near, hf=far, nb_bins=args.samples, loss_function=loss_function)
 	training_time = time.monotonic() - now
 	timestamp = time.strftime("%Y_%m_%d_%H:%M:%S")
-	checkpoint = uuid.uuid4().hex[0:10]
+	
+
+
 	params_dict = {
 			"timestamp": timestamp,
 			"model": model.toDict(),
@@ -137,13 +147,13 @@ if __name__ == '__main__':
 		sys_command = f"ffmpeg -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
 
-	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c)
-
+	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c, noise_level=args.noise, noise_sd=args.noise_sd)
+	
 	for img_index in range(3):
 		test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 		weights = get_ray_alpha(trained_model, testing_dataset, img_index, hn=near, hf=far, device=args.test_device, nb_bins=samples, H=h, W=w)
 		cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
-		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}, training time (s): {training_time:.2f}"
+		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}, training time (h): {training_time/3600:.2f}\nnoise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})"
 		write_imgs((cpu_imgs,curve, weights.data.cpu()), f'out/{checkpoint}_loss_{img_index}.png', text)
 
 	if args.video:

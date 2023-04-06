@@ -11,13 +11,13 @@ from ray_utils import *
 from helpers import write_img
 
 class BlenderDataset(Dataset):
-    # TODO: some sort of "super" here to pass args to Dataset?
-    # TODO: NEED TO SORT WIDTH AND HEIGHT...
-    def __init__(self, root_dir, filename, split, img_wh, n_chan=4):
+    def __init__(self, root_dir, filename, split, img_wh, n_chan, noise_level=0, noise_sd=132):
         self.root_dir = root_dir
         self.filename = filename
         self.split = split
         self.n_chan = n_chan
+        self.noise_level = noise_level
+        self.noise_sd = noise_sd
         self.img_wh = img_wh
         self.define_transforms()
 
@@ -34,7 +34,6 @@ class BlenderDataset(Dataset):
 
         self.focal = 0.5*w_orig/np.tan(0.5*self.meta['camera_angle_x'])
         self.focal *= w/w_orig # modify focal length to match size self.img_wh
-        # print(f"rescaled focal length is {self.focal}")
         
         # ray directions for all pixels, same for all images (same H, W, focal)
         self.directions = \
@@ -46,14 +45,17 @@ class BlenderDataset(Dataset):
         self.all_rgbs = []
         
         if (self.split == 'train'):
-            i = 0
+            # since we add random noise to the images, we need
+            # to save them all to self.data, since otherwise
+            # if we added noise a second time (for multiple epochs
+            # for example) it would be a different training image,
+            # and although it would probably converge better,
+            # it wouldn't be a fair test.
             for frame in self.meta['frames']:
                 rays_o, rays_d, img = self.process_frame(frame)
                 self.all_rgbs += [img]
                 self.all_rays += [torch.cat([rays_o, rays_d],1)] # (h*w, 6)
-                # if i==0:
-                #     write_img(img.reshape(h, w, 3), "train-img.png")
-                i += 1
+                
 
             
             self.all_rays = torch.cat(self.all_rays, 0) # (len(self.meta['frames])*h*w, 8)
@@ -78,13 +80,15 @@ class BlenderDataset(Dataset):
             img = img[:, :3]*img[:, -1:] + (1-img[:, -1:]) # blend A to RGB
         elif self.n_chan == 3: # no alpha
             img = img.view(3, -1).permute(1, 0) # (h*w, 3) RGB
-        
+        noise = Image.effect_noise(self.img_wh, self.noise_sd)
+        noise = self.transform(noise)
+        noise -= 0.5 # noise centred at 0.5
+        noise = noise.expand(3,-1,-1).view(3, -1).permute(1, 0)
+
+        img = (img + self.noise_level*noise).clamp(0,1)
+
         # ray direction is normalised
         rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
-        # print(f"ray origin (x,y,z=0) for img {i} is {rays_o[0,0:2]}")
-        # print(f"Camera distance from origin is {sum(rays_o[0,0:2]**2)**0.5} ")
-        # # print(f"ray dir for top-left px for img {i} is {rays_d[0,:]}")
-        # print(f"halfway along ray {i} is {rays_o + (self.far+self.near)/2*rays_d}")
         return rays_o, rays_d, img
 
 
