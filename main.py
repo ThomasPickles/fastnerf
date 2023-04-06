@@ -56,7 +56,6 @@ if __name__ == '__main__':
 	training_im = training_dataset[:w*h,6:]
 	print(training_im.shape)
 	write_img(training_im.reshape(h, w, 3), f"out/{checkpoint}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
-	exit()
 
 	model = FastNerf(args.encoding_dim, args.layers, args.neurons).to(device)
 
