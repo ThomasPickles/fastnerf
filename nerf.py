@@ -59,7 +59,6 @@ class FastNerf(nn.Module):
 		sigma_uvw = self.Fpos(self.positional_encoding(o, self.embedding_dim))
 		# constrain to be positive
 		sigma = torch.nn.functional.softplus(sigma_uvw[:, 0][..., None]) 
-		# TODO: sigma is all we care about
 
 		 # [batch_size, 1]
 		# uvw = torch.sigmoid(sigma_uvw[:, 1:].reshape(-1, 3, self.D))  # [batch_size, 3, D]

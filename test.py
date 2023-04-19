@@ -6,25 +6,22 @@ import matplotlib.pyplot as plt
 from render import render_rays, get_points_along_rays, get_points_in_slice
 from datasets import get_params
 from helpers import *
+from phantom import get_sigma_gt
 
 @torch.no_grad()
-def get_ray_alpha(model, dataset, img_index, hn, hf, device, nb_bins, H, W):
-	view = dataset[img_index]
-	ray_ids = torch.randint(0, H*W, (5,))
-	ray_origins = view[ray_ids,:3].squeeze(0).to(device)
-	ray_directions = view[ray_ids,3:6].squeeze(0).to(device)
-	x, delta = get_points_along_rays(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
-	sigma = model(x)
-	sigma = sigma.reshape(delta.shape)
-	weights = sigma*delta
-	weights = weights[:,:-1].transpose(0,1)
-	return weights
+def get_ray_sigma(model, points, device):
+	model = model.to(device)
+	points = points.to(device)
+	# CHECK: model and points could be on different devices
+	# if we've created trained model on gpu and test model
+	# on cpu...
+	sigma = model(points)
+	return sigma
 
 def render_slice(model, z, device):
 	x = get_points_in_slice(z,device)
 	sigma = model(x)
 	return sigma.expand(-1, 3)
-
 
 def render_image(model, view, **params):
 	img_tensor = torch.zeros_like(view[...,6:])

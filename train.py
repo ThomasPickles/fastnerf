@@ -29,7 +29,6 @@ def train(nerf_model, optimizer, scheduler, data_loader, device, hn, hf, nb_epoc
 				regenerated_px_values = render_rays(nerf_model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
 				
 				loss = loss_function(regenerated_px_values, ground_truth_px_values)
-				# perhaps a better loss would be relative error?
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
