@@ -11,7 +11,7 @@ from convert_data import BlenderDataset
 from nerf import FastNerf
 from datasets import get_params
 from helpers import linear_to_db
-import test
+from test import *
 from train import train
 from render import get_points_along_rays
 import helpers as my
@@ -152,7 +152,7 @@ if __name__ == '__main__':
 	testing_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="test", img_wh=(w,h), n_chan=c, noise_level=0, noise_sd=0)
 	
 	for img_index in range(3):
-		test_loss, imgs = test.batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
+		test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
 		cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
 		train_img = training_im.reshape(h, w, 3)
 		cpu_imgs.append(train_img)
@@ -168,7 +168,7 @@ if __name__ == '__main__':
 		points, delta = get_points_along_rays(ray_origins, ray_directions, hn=near, hf=far, nb_bins=args.samples)
 	
 		# since x are calculated randomly, we need to pass in the same values
-		sigma = test.get_ray_sigma(trained_model, points, device=args.test_device)
+		sigma = get_ray_sigma(trained_model, points, device=args.test_device)
 		points, delta = get_points_along_rays(ray_origins, ray_directions, hn=near, hf=far, nb_bins=192)
 		sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
 		
