@@ -16,7 +16,7 @@ def write_imgs(data, path, title=None):
 	imgs, curve, rays, rays_gt, px_vals = data
 
 	# colors = np.random.rand(5)
-	colors = ['b','g','r','c','m']
+	colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 	custom_cycler = cycler(color=colors)
 
 	# images

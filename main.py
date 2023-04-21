@@ -158,7 +158,7 @@ if __name__ == '__main__':
 		cpu_imgs.append(train_img)
 		view = testing_dataset[img_index]
 		
-		NB_RAYS = 5
+		NB_RAYS = 10
 		ray_ids = torch.randint(0, h*w, (NB_RAYS,)) # 5 random rays
 		px_vals = my.get_px_values(ray_ids, w) 
 	
