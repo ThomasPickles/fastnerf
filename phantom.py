@@ -12,11 +12,35 @@ import matplotlib.pyplot as plt
 
 # phantom is centred at 0,0,0
 # voxel_size = 0.3
-def points_to_voxels(points, bounds):
-    bounds = np.expand_dims(bounds, 0)
-    points[:,[0,1,2]] = points[:,[2,1,0]]
-    vx = points/0.3 + bounds/2
-    return vx
+# swapping axes (x,y,z) -> (3,-2,-1)
+def world_to_local(points):
+    ''' Takes an array of size [n_points, 3] '''
+    n_points =  points.shape[0]
+    assert points.shape[1] == 3, 'invalid size'
+    expanded_points = np.concatenate((points,np.ones((n_points,1))),axis=1)
+    M = np.array([
+        [0,0,-1/0.3,331/2],
+        [0,-1/0.3,0,275/2],
+        [1/0.3,0,0,275/2]
+        ])
+    M = np.expand_dims(M, axis=0)
+    expanded_points = np.expand_dims(expanded_points, axis=2)
+    return np.matmul(M,expanded_points).squeeze()
+
+# swapping axes (1,2,3) -> (-z,-y,x)
+def local_to_world(voxs):
+    ''' Takes an array of size [n_voxs, 3] '''
+    n_voxs =  voxs.shape[0]
+    assert voxs.shape[1] == 3, 'invalid size'
+    trans_vox = np.concatenate((voxs,np.ones((n_voxs,1))),axis=1)
+    M = np.array([
+        [0,0,1*0.3,-0.3*275/2],
+        [0,-1*0.3,0,0.3*275/2],
+        [-1*0.3,0,0,0.3*331/2]
+        ])
+    result = np.matmul(M,trans_vox) # [n_voxs, 3, 1]
+    return result.squeeze()
+
 
 def in_bounds(x, upper):
     # we use zero indexing, so x needs to be explicitly
@@ -25,27 +49,64 @@ def in_bounds(x, upper):
     all_in_bounds = np.all(dimension_in_bounds, axis = 1, keepdims=True)
     return all_in_bounds
 
-def get_value_from_phantom(bounded_vx, phantom):
-    # phantom is z,x,y
-    # points are 
-    values = phantom[bounded_vx[:,0],bounded_vx[:,1],bounded_vx[:,2]]
-    return np.expand_dims(values, axis=1)
+def get_value_from_phantom(vox, phantom):
+    ''' Safe method which does bounds checking '''
+    bounds = np.asarray(phantom.shape)
+    bounded_vx = np.clip(vox, 0.5, bounds-0.5)
+    vx = np.round(bounded_vx).astype(int)
+    values = phantom[vx[:,0], vx[:,1], vx[:,2]]
+    return values
 
 def get_sigma_gt(points, phantom):
     assert points.shape[1] == 3, 'needs to be 3d points'
-    bounds = np.asarray(phantom.shape)
-    vx = points_to_voxels(points, bounds)
-    # HACK: just taking the lower value is a bit of a 
+    vx = world_to_local(points)
+    # HACK: just taking the lower value is a bit of a
     # hack.  we could definitely do some interpolation here
-    vx_int = np.floor(vx).astype(int) # [200,3]
-    in_points = in_bounds(vx_int, bounds)
-    # make sure we clip indices so that we
-    # don't get out-of-bounds errors
-    bounded_vx = np.clip(vx_int,0, bounds-1)
-    sigma = get_value_from_phantom(bounded_vx, phantom)
+    bounds = np.asarray(phantom.shape)
+    in_points = in_bounds(vx, bounds)
+
+    sigma = get_value_from_phantom(vx, phantom)
     # although points clipped to the boundary are probably
     # zero density anyway, it's safer to explicitly set
     # them to zero
-    sigma = np.where(in_points, sigma, 0)
+    sigma = np.where(in_points, np.expand_dims(sigma, axis=1), 0)
     return sigma
+
+phantom = np.load('jaw/jaw_phantom.npy')
+h,w,_ = phantom.shape
+
+
+
+## TESTING ###
+
+world_data = [
+    [-160, 0, 0], # frame 0 test, from right, ray origin
+    [-50, 155, 0], # frame 1 test, straight on, ray origin
+    [145,-70,0], # frame 2 test, from left, ray origin
+    [0, 0, 0], # origin
+    [0, 0, 1] # tmp
+    ]
+world_coords = np.asarray(world_data)
+lc_out = world_to_local(world_coords)
+assert lc_out[0,2] < 0, 'axis 3 should be too small'
+assert lc_out[1,1] < 0, 'axis 2 should be too small'
+assert lc_out[2,2] > w, 'axis 3 should be too large'
+
+local_data = [
+    [128,99,176], # 2 teeth
+    [128,99,98], # 1 tooth
+    [0, 0, 0], # origin
+    [5, 5, 5],
+    # []
+]
+local_coords = np.asarray(local_data)
+sigmas = get_value_from_phantom(local_coords, phantom)
+assert sigmas[0] == 1.0, 'tooth'
+assert sigmas[1] == 1.0, 'tooth'
+assert sigmas[2] == 0.0, 'empty space'
+assert sigmas[3] == 0.0, 'empty space'
+# assert sigmas[4] == 0.1, 'spine'
+# assert sigmas[5] == 0.05, 'tissue'
+
+
 

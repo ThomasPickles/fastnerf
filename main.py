@@ -158,7 +158,7 @@ if __name__ == '__main__':
 		cpu_imgs.append(train_img)
 		view = testing_dataset[img_index]
 		
-		NB_RAYS = 10
+		NB_RAYS = 5
 		ray_ids = torch.randint(0, h*w, (NB_RAYS,)) # 5 random rays
 		px_vals = my.get_px_values(ray_ids, w) 
 	
@@ -169,11 +169,12 @@ if __name__ == '__main__':
 	
 		# since x are calculated randomly, we need to pass in the same values
 		sigma = get_ray_sigma(trained_model, points, device=args.test_device)
-		points, delta = get_points_along_rays(ray_origins, ray_directions, hn=near, hf=far, nb_bins=192)
 		sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
 		
 		sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
 		sigma_gt = sigma_gt.reshape(NB_RAYS,-1)
+		jitter = 0.005*np.random.rand(NB_RAYS,1)
+		sigma_gt = sigma_gt + jitter # add some jitter to distinguish values
 		
 		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}, training time (h): {training_time/3600:.2f}\nnoise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})"
 		my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text)

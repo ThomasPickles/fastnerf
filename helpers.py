@@ -10,13 +10,19 @@ def get_px_values(ray_ids, W):
 	px_vals = np.stack((cols,rows), axis=1)
 	return px_vals
 
+def forward(x):
+    return x**(1/2)
+
+def inverse(x):
+    return x**2
+
 def write_imgs(data, path, title=None):
 	fig = plt.figure(tight_layout=True, figsize=(40., 20.))
 	gs = gridspec.GridSpec(2, 5)
 	imgs, curve, rays, rays_gt, px_vals = data
 
 	# colors = np.random.rand(5)
-	colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+	colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'] #, '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 	custom_cycler = cycler(color=colors)
 
 	# images
@@ -36,8 +42,9 @@ def write_imgs(data, path, title=None):
 	# ray
 	ax = fig.add_subplot(gs[0, 4])
 	ax.set_prop_cycle(custom_cycler)
+	ax.set_yscale('function', functions=(forward, inverse))
 	ax.plot(rays.transpose(), '-')
-	ADJUSTED_BRIGHTNESS = 10
+	ADJUSTED_BRIGHTNESS = 1
 	ax.plot(ADJUSTED_BRIGHTNESS*rays_gt.transpose(), '--')
 	ax.set_title("density along rays")
 
