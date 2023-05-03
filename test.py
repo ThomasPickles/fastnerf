@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from render import render_rays, get_points_along_rays, get_points_in_slice
 from datasets import get_params
 from helpers import *
-from phantom import get_sigma_gt
+from phantom import get_sigma_gt, local_to_world
 
 @torch.no_grad()
 def get_ray_sigma(model, points, device):
@@ -18,9 +18,12 @@ def get_ray_sigma(model, points, device):
 	sigma = model(points)
 	return sigma
 
-def render_slice(model, z, device):
-	x = get_points_in_slice(z,device)
-	sigma = model(x)
+def render_slice(model, z, device, resolution):
+	vox = get_points_in_slice(z,device, resolution)
+	points = local_to_world(vox)
+	points32 = points.astype(np.float32) # for compatibility with torch
+	points = torch.from_numpy(points32).to(device)
+	sigma = model(points)
 	return sigma.expand(-1, 3)
 
 def render_image(model, view, **params):

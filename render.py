@@ -5,13 +5,16 @@ def compute_accumulated_transmittance(alphas):
 	return torch.cat((torch.ones((accumulated_transmittance.shape[0], 1), device=alphas.device),
 					  accumulated_transmittance[:, :-1]), dim=-1)
 
-def get_points_in_slice(z0,device):
+def get_points_in_slice(z0,device, resolution):
 	# initially z=0 slice
-	xs = torch.linspace(-50, 50, steps=100, device=device)
-	x,y = torch.meshgrid(xs, xs, indexing='xy')
-	z = torch.tensor([z0], device=device).expand(10000).reshape(x.shape)
-	r = torch.stack([x,y,z],dim=2).reshape(-1, 3)
-	return r #[10000, 3]
+	# actually z slices are square!
+	xs = torch.linspace(0, 275, steps=resolution[0], device=device)
+	ys = torch.linspace(0, 275, steps=resolution[1], device=device)
+	n_pixels = resolution[0] * resolution[1]
+	x,y = torch.meshgrid(xs, ys, indexing='xy')
+	z = torch.tensor([z0], device=device).expand(n_pixels).reshape(x.shape)
+	voxs = torch.stack([z,y,x],dim=2).reshape(-1, 3)
+	return voxs 
 
 def get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins):
 	device = ray_origins.device

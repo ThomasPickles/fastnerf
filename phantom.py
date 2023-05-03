@@ -38,8 +38,9 @@ def local_to_world(voxs):
         [0,-1*0.3,0,0.3*275/2],
         [-1*0.3,0,0,0.3*331/2]
         ])
-    result = np.matmul(M,trans_vox) # [n_voxs, 3, 1]
-    return result.squeeze()
+    M = np.expand_dims(M, axis=0)
+    trans_vox = np.expand_dims(trans_vox, axis=2)
+    return np.matmul(M,trans_vox).squeeze()
 
 
 def in_bounds(x, upper):
@@ -97,9 +98,11 @@ local_data = [
     [128,99,98], # 1 tooth
     [0, 0, 0], # origin
     [5, 5, 5],
+    [h-1,w-1,w-1] # furthest voxel
     # []
 ]
 local_coords = np.asarray(local_data)
+wc_out = local_to_world(local_coords)
 sigmas = get_value_from_phantom(local_coords, phantom)
 assert sigmas[0] == 1.0, 'tooth'
 assert sigmas[1] == 1.0, 'tooth'

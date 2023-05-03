@@ -10,11 +10,19 @@ def get_px_values(ray_ids, W):
 	px_vals = np.stack((cols,rows), axis=1)
 	return px_vals
 
+def moving_average(vals, window=10) :
+	n_v = len(vals)
+	idx = np.arange(window)
+	kernel = np.exp(-0.2*idx)
+	kernel /= kernel.sum()
+	av = np.convolve(vals, kernel, mode='valid')
+	return av
+
 def forward(x):
-    return x**(1/2)
+	return x**(1/2)
 
 def inverse(x):
-    return x**2
+	return x**2
 
 def write_imgs(data, path, title=None):
 	fig = plt.figure(tight_layout=True, figsize=(40., 20.))
@@ -35,7 +43,7 @@ def write_imgs(data, path, title=None):
 
 	# curve
 	ax = fig.add_subplot(gs[1, :])
-	ax.plot(curve)
+	ax.plot(moving_average(curve,10))
 	ax.set_ylabel('dB')
 	ax.invert_yaxis()
 
@@ -44,8 +52,9 @@ def write_imgs(data, path, title=None):
 	ax.set_prop_cycle(custom_cycler)
 	ax.set_yscale('function', functions=(forward, inverse))
 	ax.plot(rays.transpose(), '-')
-	ADJUSTED_BRIGHTNESS = 1
-	ax.plot(ADJUSTED_BRIGHTNESS*rays_gt.transpose(), '--')
+	if rays_gt:
+		ADJUSTED_BRIGHTNESS = 1
+		ax.plot(ADJUSTED_BRIGHTNESS*rays_gt.transpose(), '--')
 	ax.set_title("density along rays")
 
 	fig.suptitle(title, fontsize=16)
@@ -64,3 +73,7 @@ def write_img(img, path, verbose=True):
 
 def linear_to_db(x):
 	return -10.*np.log(x)/np.log(10.)
+
+if __name__ == '__main__':
+	print(moving_average(np.arange(20),1))
+	print(moving_average(np.arange(20),10))

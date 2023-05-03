@@ -80,6 +80,8 @@ class BlenderDataset(Dataset):
             img = img[:, :3]*img[:, -1:] + (1-img[:, -1:]) # blend A to RGB
         elif self.n_chan == 3: # no alpha
             img = img.view(3, -1).permute(1, 0) # (h*w, 3) RGB
+        elif self.n_chan == 1:
+            img = img.expand(3, -1, -1).view(3,-1).permute(1,0) # (h*w, 3) RGB
         noise = Image.effect_noise(self.img_wh, self.noise_sd)
         noise = self.transform(noise)
         noise -= 0.5 # noise centred at 0.5
