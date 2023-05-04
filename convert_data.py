@@ -1,17 +1,18 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, WeightedRandomSampler
 import json
 import numpy as np
 import os
 from PIL import Image
 from torchvision import transforms as T
 from torchvision import io
+import random
 
 from ray_utils import *
 from helpers import write_img
 
 class BlenderDataset(Dataset):
-    def __init__(self, root_dir, filename, split, img_wh, n_chan, noise_level=0, noise_sd=132):
+    def __init__(self, root_dir, filename, split, img_wh, n_chan, noise_level=0, noise_sd=0, n_train=0):
         self.root_dir = root_dir
         self.filename = filename
         self.split = split
@@ -19,8 +20,8 @@ class BlenderDataset(Dataset):
         self.noise_level = noise_level
         self.noise_sd = noise_sd
         self.img_wh = img_wh
+        self.n_train = n_train
         self.define_transforms()
-
         self.read_meta()
 
     def read_meta(self):
@@ -51,12 +52,11 @@ class BlenderDataset(Dataset):
             # for example) it would be a different training image,
             # and although it would probably converge better,
             # it wouldn't be a fair test.
-            for frame in self.meta['frames']:
+            frames = self.meta['frames']
+            for frame in random.sample(frames, self.n_train):
                 rays_o, rays_d, img = self.process_frame(frame)
                 self.all_rgbs += [img]
                 self.all_rays += [torch.cat([rays_o, rays_d],1)] # (h*w, 6)
-                
-
             
             self.all_rays = torch.cat(self.all_rays, 0) # (len(self.meta['frames])*h*w, 8)
             self.all_rgbs = torch.cat(self.all_rgbs, 0) # (len(self.meta['frames])*h*w, 3)
@@ -96,6 +96,9 @@ class BlenderDataset(Dataset):
 
     def define_transforms(self):
         self.transform = T.ToTensor()
+
+    def get_pixel_values(self):
+        return self.data[:,6]
 
     def __len__(self):
         if self.split == 'train':

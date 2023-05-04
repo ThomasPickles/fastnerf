@@ -24,9 +24,10 @@ def forward(x):
 def inverse(x):
 	return x**2
 
-def write_imgs(data, path, title=None):
+def write_imgs(data, path, title=None, show_training_img=False):
 	fig = plt.figure(tight_layout=True, figsize=(40., 20.))
-	gs = gridspec.GridSpec(2, 5)
+	n_cols = 5 if show_training_img else 4
+	gs = gridspec.GridSpec(2, n_cols)
 	imgs, curve, rays, rays_gt, px_vals = data
 
 	# colors = np.random.rand(5)
@@ -34,7 +35,10 @@ def write_imgs(data, path, title=None):
 	custom_cycler = cycler(color=colors)
 
 	# images
-	for i, sub_tit in enumerate(["out","test","diff","example training"]):
+	titles = ["out","test","diff"]
+	if show_training_img:
+		titles.append("example training")
+	for i, sub_tit in enumerate(titles):
 		ax = fig.add_subplot(gs[0, i])
 		ax.imshow(imgs[i].clip(0,1))
 		if i < 2:
@@ -48,7 +52,7 @@ def write_imgs(data, path, title=None):
 	ax.invert_yaxis()
 
 	# ray
-	ax = fig.add_subplot(gs[0, 4])
+	ax = fig.add_subplot(gs[0, n_cols-1])
 	ax.set_prop_cycle(custom_cycler)
 	ax.set_yscale('function', functions=(forward, inverse))
 	ax.plot(rays.transpose(), '-')
@@ -57,7 +61,7 @@ def write_imgs(data, path, title=None):
 		ax.plot(ADJUSTED_BRIGHTNESS*rays_gt.transpose(), '--')
 	ax.set_title("density along rays")
 
-	fig.suptitle(title, fontsize=16)
+	fig.suptitle(title, fontsize=18, fontweight="bold")
 	plt.savefig(path, bbox_inches='tight')
 	print(f"Image written to {path}")
 	plt.close()

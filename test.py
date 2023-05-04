@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
-from render import render_rays, get_points_along_rays, get_points_in_slice
+from render import render_rays, get_points_along_rays, get_points_in_slice, get_voxels_in_slice
 from datasets import get_params
 from helpers import *
 from phantom import get_sigma_gt, local_to_world
@@ -18,11 +18,12 @@ def get_ray_sigma(model, points, device):
 	sigma = model(points)
 	return sigma
 
-def render_slice(model, z, device, resolution):
-	vox = get_points_in_slice(z,device, resolution)
-	points = local_to_world(vox)
-	points32 = points.astype(np.float32) # for compatibility with torch
-	points = torch.from_numpy(points32).to(device)
+def render_slice(model, z, device, resolution, voxel_grid = False):
+	if voxel_grid:
+		vox = get_voxels_in_slice(z, device, resolution)
+		points = local_to_world(vox)
+	else:
+		points = get_points_in_slice(z, device, resolution)
 	sigma = model(points)
 	return sigma.expand(-1, 3)
 

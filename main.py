@@ -3,9 +3,10 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler, BatchSampler
 import time, json, uuid
 import os
+import random
 
 from convert_data import BlenderDataset
 from nerf import FastNerf
@@ -25,8 +26,9 @@ def parse_args():
 	parser.add_argument("-d", "--encoding_dim", type=int, default=10, help="Number of hidden layers")
 	parser.add_argument("-n", "--neurons", type=int, default=384, help="Neurons per layer")
 	parser.add_argument("-s", "--samples", type=int, default=192, help="Number of samples per ray")
+	parser.add_argument("--n_train", default=200, type=int, help="Network learning rate")
 	parser.add_argument("--lr", default=1e-4, type=float, help="Network learning rate")
-	parser.add_argument("--noise", default=1e-1, type=float, help="Gaussian noise level to apply to training images")
+	parser.add_argument("--noise", default=0, type=float, help="Gaussian noise level to apply to training images")
 	parser.add_argument("--noise_sd", default=128, type=float, help="Gaussian noise level to apply to training images")
 	parser.add_argument("--loss", default='L2', choices=['L2','Huber','L1','Exp'], help="Loss function")
 	parser.add_argument("--height", "--px", type=int, default=150, help="Compressed image height")
@@ -36,6 +38,7 @@ def parse_args():
 	parser.add_argument("--device", default='cuda', choices=['cuda','cpu'])
 	parser.add_argument("--test_device", default='cpu', choices=['cuda','cpu'])
 	parser.add_argument("--file", default='transforms')
+	parser.add_argument("--importance_sampling", action='store_true', help="Privileges bright pixels for training")
 	parser.add_argument("--video", action='store_true', help="Outputs video")
 	parser.add_argument("--slice", action='store_true', help="Outputs slice")
 	parser.add_argument("--load_checkpoint", default='', help="Load uuid and bypass training")
@@ -54,10 +57,18 @@ if __name__ == '__main__':
 
 	c, w, (near,far) = get_params(args.dataset,h)
 
+	random.seed(0)
+
 	if not args.load_checkpoint:
 		checkpoint = uuid.uuid4().hex[0:10]
 		
-		training_dataset = BlenderDataset(args.dataset, args.file, split="train", img_wh=(w,h), n_chan=c, noise_level=args.noise, noise_sd=args.noise_sd)
+		training_dataset = BlenderDataset(args.dataset, args.file, split="train", img_wh=(w,h), n_chan=c, noise_level=args.noise, noise_sd=args.noise_sd, n_train=args.n_train)
+		if args.importance_sampling:
+			pixel_weights = training_dataset.get_pixel_values()
+			sampler = WeightedRandomSampler(pixel_weights, len(pixel_weights))
+			data_loader = DataLoader(training_dataset, batch_size=args.batchsize, sampler=sampler)
+		else:
+			data_loader = DataLoader(training_dataset, args.batchsize, shuffle=True)
 		training_im = training_dataset[:w*h,6:]
 		# my.write_img(, f"out/{checkpoint}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
 
@@ -65,7 +76,20 @@ if __name__ == '__main__':
 
 		model_optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 		scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=[2, 4, 8], gamma=0.5)
-		data_loader = DataLoader(training_dataset, batch_size=args.batchsize, shuffle=True)
+		# i = 0
+		# data = iter(data_loader)
+		# all_vals = []
+		# while i < 100:
+		# 	this_batch = next(data)
+		# 	px_values = this_batch[:,6]
+		# 	all_vals.extend(px_values)
+		# 	# print(f"batch {i}, with shape {this_batch.shape} has px_vals {px_values}")
+		# 	i = i+1
+		# import matplotlib.pyplot as plt
+		# plt.hist(np.array(all_vals), bins=10)
+		# plt.show()
+		# exit()
+		
 		if args.loss == 'L2':
 			loss_function = nn.MSELoss()
 		elif args.loss == 'Huber':
@@ -141,20 +165,22 @@ if __name__ == '__main__':
 	trained_model.eval()
 	trained_model.to(args.test_device)
 
+	is_voxel_grid = True if (args.dataset == 'jaw') else False 
+	MAX_BRIGHTNESS = 2.5 if (args.dataset == 'jaw') else 10
 	if args.slice:
-		for z in range(331):
-			resolution = (275,275)
-			MAX_BRIGHTNESS = 2.5
-			img = render_slice(model=trained_model, z=z, device=args.test_device, resolution=resolution)
+		for idx in range(100):
+			z = int(3.3*idx) if is_voxel_grid else idx - 50
+			resolution = (100,100)
+			img = render_slice(model=trained_model, z=z, device=args.test_device, resolution=resolution, voxel_grid=is_voxel_grid)
 			img = img.data.cpu().numpy().reshape(resolution[0], resolution[1], 3)/MAX_BRIGHTNESS
-			my.write_img(img, f'tmp/slice_{checkpoint}_{z:03}.png', verbose=False)
+			my.write_img(img, f'tmp/slice_{checkpoint}_{idx:03}.png', verbose=False)
 		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
 
 	phantom = np.load(args.phantom_path)
 
 	# no noise in test data
-	testing_dataset = BlenderDataset(args.dataset, 'transforms', split="test", img_wh=(w,h), n_chan=c, noise_level=0, noise_sd=0)
+	testing_dataset = BlenderDataset(args.dataset, 'transforms', split="test", img_wh=(w,h), n_chan=c)
 	
 	for img_index in range(3):
 		test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
@@ -175,7 +201,7 @@ if __name__ == '__main__':
 		# since x are calculated randomly, we need to pass in the same values
 		sigma = get_ray_sigma(trained_model, points, device=args.test_device)
 		
-		has_gt = True if (args.dataset == 'jaw') else False 
+		has_gt = False # TODO: fix ground truth True if (args.dataset == 'jaw') else False 
 		if has_gt:
 			sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
 			sigma_gt = sigma_gt.reshape(NB_RAYS,-1)
@@ -185,11 +211,11 @@ if __name__ == '__main__':
 			sigma_gt = None
 
 		sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
-		text = f"test_loss: {test_loss:.1f}dB, training_loss: {final_training_loss_db}dB\nlr: {lr}, loss function: {loss}, epochs: {epochs}\nlayers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, img_size: {img_size},\nrendering: {rendering}, samples: {samples}, training time (h): {training_time/3600:.2f}\nnoise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})"
-		my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text)
+		text = f"test_loss: {test_loss:.1f}dB, training_loss: {float(final_training_loss_db):.1f}dB, lr: {lr:.2E}, loss function: {loss}, training noise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})\nepochs: {epochs}, layers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, training time (h): {training_time/3600:.2f}\nnumber of training images: {args.n_train}, img_size: {img_size}, samples per ray: {samples}, pixel importance sampling: {args.importance_sampling}\n"
+		my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text, show_training_img=True)
 
 	if args.video:
-		video_dataset = BlenderDataset(args.dataset, 'transforms_full_b', split="video", img_wh=(w,h), n_chan=c)
+		video_dataset = BlenderDataset(args.dataset, 'transforms', split="video", img_wh=(w,h), n_chan=c)
 
 		for img_index in range(720):
 			_, imgs = batch_test(model=trained_model, dataset=video_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)

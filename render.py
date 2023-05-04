@@ -5,9 +5,10 @@ def compute_accumulated_transmittance(alphas):
 	return torch.cat((torch.ones((accumulated_transmittance.shape[0], 1), device=alphas.device),
 					  accumulated_transmittance[:, :-1]), dim=-1)
 
-def get_points_in_slice(z0,device, resolution):
+def get_voxels_in_slice(z0, device, resolution):
 	# initially z=0 slice
 	# actually z slices are square!
+	# JAW DIMENSIONS
 	xs = torch.linspace(0, 275, steps=resolution[0], device=device)
 	ys = torch.linspace(0, 275, steps=resolution[1], device=device)
 	n_pixels = resolution[0] * resolution[1]
@@ -15,6 +16,19 @@ def get_points_in_slice(z0,device, resolution):
 	z = torch.tensor([z0], device=device).expand(n_pixels).reshape(x.shape)
 	voxs = torch.stack([z,y,x],dim=2).reshape(-1, 3)
 	return voxs 
+
+def get_points_in_slice(z0, device, resolution):
+	# initially z=0 slice
+	# actually z slices are square!
+	# WALNUT DIMENSIONS
+	xs = torch.linspace(-35, 35, steps=resolution[0], device=device)
+	ys = torch.linspace(-35, 35, steps=resolution[1], device=device)
+	n_pixels = resolution[0] * resolution[1]
+	x,y = torch.meshgrid(xs, ys, indexing='xy')
+	z = torch.tensor([z0], device=device).expand(n_pixels).reshape(x.shape)
+	points = torch.stack([x,y,z],dim=2).reshape(-1, 3)
+	return points 
+
 
 def get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins):
 	device = ray_origins.device
