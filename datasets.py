@@ -6,8 +6,8 @@ def get_params(d, h):
     elif d == 'walnut':
         aspect_ratio = 2240/2368 
         # angle of view
-        near = 343 - 150 # camera is on a circle 343 from origin at (x,y,0)
-        far = 343 + 150 # 150 is approx
+        near = 349 - 39 # camera is on a circle 343 from origin at (x,y,0)
+        far = 349 + 39 # 150 is approx
         return 1, int(h*aspect_ratio), (near,far)
     elif d == 'jaw':
         # sRBA
