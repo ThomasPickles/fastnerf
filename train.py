@@ -24,7 +24,7 @@ def train(nerf_model, optimizer, scheduler, data_loader, device, hn, hf, nb_epoc
 			for ep, batch in enumerate(data_loader):
 				ray_origins = batch[:, :3].to(device)
 				ray_directions = batch[:, 3:6].to(device)
-				ground_truth_px_values = batch[:, 6:].to(device)
+				ground_truth_px_values = batch[:, 6].to(device)
 
 				regenerated_px_values = render_rays(nerf_model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
 				

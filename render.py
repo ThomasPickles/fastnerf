@@ -60,6 +60,8 @@ def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volume
 		# --- | ------- | ----- | --- | --------
 		sigma_mid = (sigma[:, 1:] + sigma[:, :-1])/2
 		alpha = (sigma_mid * delta).unsqueeze(2)
-		c = alpha.sum(dim=1).expand(-1, 3)/nb_bins
+		# single channel
+		c = alpha.sum(dim=1).squeeze()/nb_bins
+		# c = alpha.sum(dim=1).expand(-1, 3)/nb_bins
 
 	return c

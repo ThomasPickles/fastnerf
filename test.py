@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import matplotlib.pyplot as plt
 
 from render import render_rays, get_points_along_rays, get_points_in_slice, get_voxels_in_slice
@@ -27,35 +27,46 @@ def render_slice(model, z, device, resolution, voxel_grid = False):
 	sigma = model(points)
 	return sigma.expand(-1, 3)
 
-def render_image(model, view, **params):
-	img_tensor = torch.zeros_like(view[...,6:])
-	n_batches = 5
+class IndexedDataset(Dataset):
+	def __init__(self, data):
+		self.data = data
+
+	def __getitem__(self, idx):
+		return self.data[idx], idx
+
+	def __len__(self):
+		return self.data.shape[0]
+
+def render_image(model, frame, **params):
 	device = params["device"]
 	H = params["H"]
 	W = params["W"]
 	hf = params["hf"]
 	hn = params["hn"]
 	nb_bins = params["nb_bins"]
+	MAX_BATCH_SIZE = 2500 # out-of-memory if we do any more
 
-	assert H % n_batches == 0, 'not yet dealing with unequal batches' 
-	batch_size = int(H*W / n_batches)
-	for i in range(n_batches):
-		i_start, i_end = i*batch_size, (i+1)*batch_size
-		batch = view[i_start:i_end,...]
+	dataset = IndexedDataset(frame)
+	data = DataLoader(dataset, batch_size = MAX_BATCH_SIZE)
+
+	img_tensor = torch.zeros_like(frame[...,6]) # single channel
+	for batch, idx in data:
 		ray_origins = batch[...,:3].squeeze(0).to(device)
 		ray_directions = batch[...,3:6].squeeze(0).to(device)
-		# this operation is runs out of memory, hence for loop
 		regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
-		img_tensor[i_start:i_end,...] = regenerated_px_values
+		img_tensor[idx,...] = regenerated_px_values.cpu()
+
 	return img_tensor
 
 
 @torch.no_grad()
 def batch_test(model, dataset, img_index, **render_params):
-	view = dataset[img_index]
-	img_tensor = render_image(model, view, **render_params)
+	frame = dataset[img_index]
+	print(frame.shape)
 
-	gt = view[...,6:].squeeze(0)
+	img_tensor = render_image(model, frame, **render_params)
+
+	gt = frame[...,6].squeeze(0)
 	diff = (gt - img_tensor).abs()
 	loss = (diff ** 2).mean() # probably not the best measure, we want peak
 	test_loss = linear_to_db(loss)

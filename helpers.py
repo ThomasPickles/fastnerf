@@ -40,9 +40,11 @@ def write_imgs(data, path, title=None, show_training_img=False):
 		titles.append("example training")
 	for i, sub_tit in enumerate(titles):
 		ax = fig.add_subplot(gs[0, i])
-		ax.imshow(imgs[i].clip(0,1))
 		if i < 2:
+			ax.imshow(imgs[i].clip(0,1),cmap='Greys_r',vmin=0,vmax=1)
 			ax.scatter(px_vals[:,0],px_vals[:,1],c=colors,s=250)
+		else:
+			ax.imshow(imgs[i].clip(0,1),cmap='viridis')
 		ax.set_title(sub_tit)
 
 	# curve

@@ -151,6 +151,7 @@ if __name__ == '__main__':
 	loss = params_dict["loss"]
 	final_training_loss_db = params_dict["final_training_loss_db"]
 	curve = params_dict["training_loss"]
+	training_time = float(params_dict["run_time"])
 
 	# if epochs < 20:
 	# 	print("Not fully trained.  Skipping file...")
@@ -160,33 +161,26 @@ if __name__ == '__main__':
 		print("No learning rate.  Skipping file...")
 		exit()
 
+	has_gt = False # TODO: fix ground truth True if (args.dataset == 'jaw') else False 
+	if has_gt:
+		phantom = np.load(args.phantom_path)
+
+	# no noise in test data
+	testing_dataset = BlenderDataset(args.dataset, 'transforms', split="test", img_wh=(w,h), n_chan=c)
+
 	trained_model = FastNerf(embed_dim, layers, neurons)
 	trained_model.load_state_dict(torch.load(snapshot_path))
 	trained_model.eval()
 	trained_model.to(args.test_device)
-
-	is_voxel_grid = True if (args.dataset == 'jaw') else False 
-	MAX_BRIGHTNESS = 2.5 if (args.dataset == 'jaw') else 10
-	if args.slice:
-		for idx in range(100):
-			z = int(3.3*idx) if is_voxel_grid else idx - 50
-			resolution = (100,100)
-			img = render_slice(model=trained_model, z=z, device=args.test_device, resolution=resolution, voxel_grid=is_voxel_grid)
-			img = img.data.cpu().numpy().reshape(resolution[0], resolution[1], 3)/MAX_BRIGHTNESS
-			my.write_img(img, f'tmp/slice_{checkpoint}_{idx:03}.png', verbose=False)
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
-		os.system(sys_command)
-
-	phantom = np.load(args.phantom_path)
-
-	# no noise in test data
-	testing_dataset = BlenderDataset(args.dataset, 'transforms', split="test", img_wh=(w,h), n_chan=c)
 	
+	show_training_img = (args.dataset == 'jaw')
+
 	for img_index in range(3):
 		test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
-		cpu_imgs = [img.data.cpu().numpy().reshape(h, w, 3) for img in imgs]
-		train_img = training_im.reshape(h, w, 3)
-		cpu_imgs.append(train_img)
+		cpu_imgs = [img.data.cpu().numpy().reshape(h, w) for img in imgs]
+		if show_training_img:
+			train_img = training_im.reshape(h, w, 3)
+			cpu_imgs.append(train_img)
 		view = testing_dataset[img_index]
 		
 		NB_RAYS = 5
@@ -201,7 +195,6 @@ if __name__ == '__main__':
 		# since x are calculated randomly, we need to pass in the same values
 		sigma = get_ray_sigma(trained_model, points, device=args.test_device)
 		
-		has_gt = False # TODO: fix ground truth True if (args.dataset == 'jaw') else False 
 		if has_gt:
 			sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
 			sigma_gt = sigma_gt.reshape(NB_RAYS,-1)
@@ -212,7 +205,22 @@ if __name__ == '__main__':
 
 		sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
 		text = f"test_loss: {test_loss:.1f}dB, training_loss: {float(final_training_loss_db):.1f}dB, lr: {lr:.2E}, loss function: {loss}, training noise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})\nepochs: {epochs}, layers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, training time (h): {training_time/3600:.2f}\nnumber of training images: {args.n_train}, img_size: {img_size}, samples per ray: {samples}, pixel importance sampling: {args.importance_sampling}\n"
-		my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text, show_training_img=True)
+		my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text, show_training_img=show_training_img)
+
+
+	is_voxel_grid = True if (args.dataset == 'jaw') else False 
+	MAX_BRIGHTNESS = 2.5 if (args.dataset == 'jaw') else 10
+	if args.slice:
+		for idx in range(100):
+			z = int(3.3*idx) if is_voxel_grid else idx - 50
+			resolution = (400,400)
+			img = render_slice(model=trained_model, z=z, device=args.test_device, resolution=resolution, voxel_grid=is_voxel_grid)
+			img = img.data.cpu().numpy().reshape(resolution[0], resolution[1], 3)/MAX_BRIGHTNESS
+			my.write_img(img, f'tmp/slice_{checkpoint}_{idx:03}.png', verbose=False)
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
+		os.system(sys_command)
+
+
 
 	if args.video:
 		video_dataset = BlenderDataset(args.dataset, 'transforms', split="video", img_wh=(w,h), n_chan=c)
