@@ -69,8 +69,8 @@ def write_imgs(data, path, title=None, show_training_img=False):
 	plt.close()
 
 def write_img(img, path, verbose=True):
-	plt.figure(figsize=(10., 10.))
-	plt.imshow(img)
+	fig, ax = plt.subplots(figsize=(20, 20))
+	ax.imshow(img, cmap='gray')
 	plt.axis('off')
 	plt.savefig(path, bbox_inches='tight')
 	if verbose:

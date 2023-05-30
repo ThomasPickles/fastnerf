@@ -6,26 +6,8 @@ import matplotlib.pyplot as plt
 from render import render_rays, get_points_along_rays, get_points_in_slice, get_voxels_in_slice
 from datasets import get_params
 from helpers import *
+from sampling import get_samples_around_point
 from phantom import get_sigma_gt, local_to_world
-
-@torch.no_grad()
-def get_ray_sigma(model, points, device):
-	model = model.to(device)
-	points = points.to(device)
-	# CHECK: model and points could be on different devices
-	# if we've created trained model on gpu and test model
-	# on cpu...
-	sigma = model(points)
-	return sigma
-
-def render_slice(model, z, device, resolution, voxel_grid = False):
-	if voxel_grid:
-		vox = get_voxels_in_slice(z, device, resolution)
-		points = local_to_world(vox)
-	else:
-		points = get_points_in_slice(z, device, resolution)
-	sigma = model(points)
-	return sigma.expand(-1, 3)
 
 class IndexedDataset(Dataset):
 	def __init__(self, data):
@@ -36,6 +18,59 @@ class IndexedDataset(Dataset):
 
 	def __len__(self):
 		return self.data.shape[0]
+
+class SamplesDataset(Dataset):
+	def __init__(self, data):
+		self.data = data
+
+	def __len__(self):
+		return self.data.shape[0] 
+
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+		return self.data[idx,:]
+
+@torch.no_grad()
+def get_ray_sigma(model, points, device):
+	model = model.to(device)
+	points = points.to(device)
+	sigma = model(points)
+	return sigma
+
+
+
+@torch.no_grad()
+def render_slice(model, z, device, resolution, voxel_grid = False):
+	if voxel_grid:
+		vox = get_voxels_in_slice(z, device, resolution)
+		points = local_to_world(vox)
+	else:
+		points = get_points_in_slice(z, device, resolution)
+	samples_per_point = 64
+	nb_points = points.shape[0]
+	delta = 70. / resolution[0] # for walnut
+	points = points.to('cpu') # this might be too big for gpu memory once we add in the samples, so we'll batch them up and then put the batches on the gpu one at a time
+	samples = get_samples_around_point(points, delta, samples_per_point) # [nb_points, 3, nb_samples]
+	sigma = torch.empty((0,1), device='cpu')
+	samples = samples.reshape(nb_points*samples_per_point,3)
+	samples_dataset = SamplesDataset(samples)
+	samples_loader = DataLoader(samples_dataset, batch_size=100_000)
+
+	for batch in samples_loader:
+		batch = batch.to('cuda')
+		# print(f"GPU memory allocated after loading tensor (MB): {torch.cuda.memory_allocated()/1024**2:.1f}")
+		batch_sigma = model(batch).cpu()
+		sigma = torch.cat((sigma,batch_sigma),0)
+		# TODO: don't need to keep all samples, can do the
+		# averaging here
+		del batch
+	
+
+	sigma = sigma.reshape(samples_per_point, -1) # [nb_points, samples_per_point]
+	sigma = torch.mean(sigma, dim=0)
+	return sigma # single channel
+
 
 def render_image(model, frame, **params):
 	device = params["device"]

@@ -36,11 +36,12 @@ def parse_args():
 	parser.add_argument("--dataset", default='walnut', choices=['jaw','walnut'])
 	parser.add_argument("--phantom_path", default='jaw/jaw_phantom.npy')
 	parser.add_argument("--device", default='cuda', choices=['cuda','cpu'])
-	parser.add_argument("--test_device", default='cpu', choices=['cuda','cpu'])
+	parser.add_argument("--test_device", default='cuda', choices=['cuda','cpu'])
 	parser.add_argument("--file", default='transforms')
 	parser.add_argument("--importance_sampling", action='store_true', help="Privileges bright pixels for training")
 	parser.add_argument("--video", action='store_true', help="Outputs video")
 	parser.add_argument("--slice", action='store_true', help="Outputs slice")
+	parser.add_argument("--no_images", action='store_true', help="Suppresses production of images")
 	parser.add_argument("--load_checkpoint", default='', help="Load uuid and bypass training")
 
 	return parser.parse_args()
@@ -175,47 +176,50 @@ if __name__ == '__main__':
 	
 	show_training_img = (args.dataset == 'jaw')
 
-	for img_index in range(3):
-		test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
-		cpu_imgs = [img.data.cpu().numpy().reshape(h, w) for img in imgs]
-		if show_training_img:
-			train_img = training_im.reshape(h, w, 3)
-			cpu_imgs.append(train_img)
-		view = testing_dataset[img_index]
+	print(args)
+	if not args.no_images:
+		for img_index in range(3):
+			test_loss, imgs = batch_test(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
+			cpu_imgs = [img.data.cpu().numpy().reshape(h, w) for img in imgs]
+			if show_training_img:
+				train_img = training_im.reshape(h, w, 3)
+				cpu_imgs.append(train_img)
+			view = testing_dataset[img_index]
+			
+			NB_RAYS = 5
+			ray_ids = torch.randint(0, h*w, (NB_RAYS,)) # 5 random rays
+			px_vals = my.get_px_values(ray_ids, w) 
 		
-		NB_RAYS = 5
-		ray_ids = torch.randint(0, h*w, (NB_RAYS,)) # 5 random rays
-		px_vals = my.get_px_values(ray_ids, w) 
-	
-		ray_origins = view[ray_ids,:3].squeeze(0)
-		ray_directions = view[ray_ids,3:6].squeeze(0)
+			ray_origins = view[ray_ids,:3].squeeze(0)
+			ray_directions = view[ray_ids,3:6].squeeze(0)
 
-		points, delta = get_points_along_rays(ray_origins, ray_directions, hn=near, hf=far, nb_bins=args.samples)
-	
-		# since x are calculated randomly, we need to pass in the same values
-		sigma = get_ray_sigma(trained_model, points, device=args.test_device)
+			points, delta = get_points_along_rays(ray_origins, ray_directions, hn=near, hf=far, nb_bins=args.samples)
 		
-		if has_gt:
-			sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
-			sigma_gt = sigma_gt.reshape(NB_RAYS,-1)
-			jitter = 0.005*np.random.rand(NB_RAYS,1)
-			sigma_gt = sigma_gt + jitter # add some jitter to distinguish values
-		else:
-			sigma_gt = None
+			# since x are calculated randomly, we need to pass in the same values
+			sigma = get_ray_sigma(trained_model, points, device=args.test_device)
+			
+			if has_gt:
+				sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
+				sigma_gt = sigma_gt.reshape(NB_RAYS,-1)
+				jitter = 0.005*np.random.rand(NB_RAYS,1)
+				sigma_gt = sigma_gt + jitter # add some jitter to distinguish values
+			else:
+				sigma_gt = None
 
-		sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
-		text = f"test_loss: {test_loss:.1f}dB, training_loss: {float(final_training_loss_db):.1f}dB, lr: {lr:.2E}, loss function: {loss}, training noise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})\nepochs: {epochs}, layers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, training time (h): {training_time/3600:.2f}\nnumber of training images: {args.n_train}, img_size: {img_size}, samples per ray: {samples}, pixel importance sampling: {args.importance_sampling}\n"
-		my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text, show_training_img=show_training_img)
+			sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
+			text = f"test_loss: {test_loss:.1f}dB, training_loss: {float(final_training_loss_db):.1f}dB, lr: {lr:.2E}, loss function: {loss}, training noise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})\nepochs: {epochs}, layers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, training time (h): {training_time/3600:.2f}\nnumber of training images: {args.n_train}, img_size: {img_size}, samples per ray: {samples}, pixel importance sampling: {args.importance_sampling}\n"
+			my.write_imgs((cpu_imgs,curve, sigma, sigma_gt, px_vals), f'out/{checkpoint}_loss_{img_index}.png', text, show_training_img=show_training_img)
 
 
 	is_voxel_grid = True if (args.dataset == 'jaw') else False 
 	MAX_BRIGHTNESS = 2.5 if (args.dataset == 'jaw') else 10
 	if args.slice:
-		for idx in range(100):
+		# for idx in range(100):
+		for idx in range(50,51):
 			z = int(3.3*idx) if is_voxel_grid else idx - 50
-			resolution = (400,400)
+			resolution = (1024,1024)
 			img = render_slice(model=trained_model, z=z, device=args.test_device, resolution=resolution, voxel_grid=is_voxel_grid)
-			img = img.data.cpu().numpy().reshape(resolution[0], resolution[1], 3)/MAX_BRIGHTNESS
+			img = img.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
 			my.write_img(img, f'tmp/slice_{checkpoint}_{idx:03}.png', verbose=False)
 		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{checkpoint}_%03d.png out/{checkpoint}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
@@ -227,7 +231,7 @@ if __name__ == '__main__':
 
 		for img_index in range(720):
 			_, imgs = batch_test(model=trained_model, dataset=video_dataset, img_index=img_index, hn=near, hf=far, device=args.test_device, nb_bins=args.samples, H=h, W=w)
-			img = imgs[0].data.cpu().numpy().reshape(h, w, 3)
+			img = imgs[0].data.cpu().numpy().reshape(h, w)
 			my.write_img(img, f'tmp/rot_{checkpoint}_{img_index:03}.png', verbose=False)
 		sys_command = f"ffmpeg -hide_banner -loglevel error -i tmp/rot_{checkpoint}_%03d.png out/{checkpoint}_rotate_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		os.system(sys_command)
