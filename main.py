@@ -62,7 +62,7 @@ if __name__ == '__main__':
 	training_im = training_dataset[:w*h,6:]
 	# my.write_img(, f"out/{run_name}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
 	
-	model = FastNerf(config["encoding"]["encoding_dim"], config["network"]["n_layers"], config["network"]["neurons_per_layer"]).to(device)
+	model = FastNerf(config["encoding"]["n_frequencies"], config["network"]["n_layers"], config["network"]["neurons_per_layer"]).to(device)
 
 	optim = config["optim"]
 	model_optimizer = torch.optim.Adam(model.parameters(), lr=optim["learning_rate"])

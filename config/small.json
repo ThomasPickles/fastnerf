@@ -4,8 +4,8 @@
         "neurons_per_layer": 384
     },
     "encoding": {
-        "type": "frequency",
-        "encoding_dim": 10
+        "otype": "Frequency",
+        "n_frequencies": 10
     },
     "optim": {
         "training_epochs": 2,
