@@ -74,7 +74,7 @@ def write_img(img, path, verbose=True):
 	plt.axis('off')
 	plt.savefig(path, bbox_inches='tight')
 	if verbose:
-		print(f"Image written to {path}")
+		print(f"Image {img.shape[0]} x {img.shape[1]} written to {path}")
 	plt.close()
 
 def linear_to_db(x):

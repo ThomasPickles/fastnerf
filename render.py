@@ -44,24 +44,17 @@ def get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins):
 	return x.reshape(-1, 3), delta
 
 
-def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins, volumetric, regularise=False):
+def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins):
 	x, delta = get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins)
 	sigma = nerf_model(x) # [batch_size*(nb_bins-1), 1]
 	sigma = sigma.reshape(-1, nb_bins)
 
-	# accumulate
-	if volumetric:
-		alpha = 1 - torch.exp(-sigma * delta)  # [batch_size, nb_bins]
-		weights = compute_accumulated_transmittance(1 - alpha).unsqueeze(2) * alpha.unsqueeze(2)
-		c = weights.sum(dim=1)  # Pixel values
-	else:
-		# interpolate: nb_bins values, nb_bins - 1 intervals
-		# --- | ------- | ----- | --- | --------
-		# --- | ------- | ----- | --- | --------
-		sigma_mid = (sigma[:, 1:] + sigma[:, :-1])/2
-		alpha = (sigma_mid * delta).unsqueeze(2)
-		# single channel
-		c = alpha.sum(dim=1).squeeze()/nb_bins
-		# c = alpha.sum(dim=1).expand(-1, 3)/nb_bins
+	# interpolate: nb_bins values, nb_bins - 1 intervals
+	# --- | ------- | ----- | --- | --------
+	# --- | ------- | ----- | --- | --------
+	sigma_mid = (sigma[:, 1:] + sigma[:, :-1])/2
+	alpha = (sigma_mid * delta).unsqueeze(2)
+	# single channel
+	c = alpha.sum(dim=1).squeeze()/nb_bins
 
 	return c

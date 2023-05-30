@@ -38,16 +38,13 @@ def get_ray_sigma(model, points, device):
 	sigma = model(points)
 	return sigma
 
-
-
 @torch.no_grad()
-def render_slice(model, z, device, resolution, voxel_grid = False):
+def render_slice(model, z, device, resolution, voxel_grid, samples_per_point):
 	if voxel_grid:
 		vox = get_voxels_in_slice(z, device, resolution)
 		points = local_to_world(vox)
 	else:
 		points = get_points_in_slice(z, device, resolution)
-	samples_per_point = 64
 	nb_points = points.shape[0]
 	delta = 70. / resolution[0] # for walnut
 	points = points.to('cpu') # this might be too big for gpu memory once we add in the samples, so we'll batch them up and then put the batches on the gpu one at a time
@@ -71,7 +68,7 @@ def render_slice(model, z, device, resolution, voxel_grid = False):
 	sigma = torch.mean(sigma, dim=0)
 	return sigma # single channel
 
-
+@torch.no_grad()	
 def render_image(model, frame, **params):
 	device = params["device"]
 	H = params["H"]
@@ -88,14 +85,14 @@ def render_image(model, frame, **params):
 	for batch, idx in data:
 		ray_origins = batch[...,:3].squeeze(0).to(device)
 		ray_directions = batch[...,3:6].squeeze(0).to(device)
-		regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins, volumetric=False)
+		regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins)
 		img_tensor[idx,...] = regenerated_px_values.cpu()
 
 	return img_tensor
 
 
 @torch.no_grad()
-def batch_test(model, dataset, img_index, **render_params):
+def test_model(model, dataset, img_index, **render_params):
 	frame = dataset[img_index]
 	print(frame.shape)
 
