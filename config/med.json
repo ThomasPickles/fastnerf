@@ -1,3 +1,7 @@
+// epochs 2 -> 20 = x10
+// n_imgs 30 -> 200 = x10
+// img_size 30 -> 150 = x25
+// total is x 2500, so 1250m = 15h ?! 
 {
     "network": {
         "n_layers": 8,

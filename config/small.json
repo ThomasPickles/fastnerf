@@ -1,3 +1,5 @@
+// run time of 2 minutes on slurm
+// 2 epochs * 30 img * 30**2 
 {
     "network": {
         "n_layers": 8,
@@ -8,7 +10,7 @@
         "n_frequencies": 10
     },
     "optim": {
-        "training_epochs": 2,
+        "training_epochs": 10,
         "loss": "L2",
         "milestones": [2, 4, 8],
         "gamma": 0.5,
@@ -23,8 +25,8 @@
         "dataset": "walnut",
         "transforms_file": "transforms",
         "ground_truth": "",
-        "img_size": 250,
-        "n_images": 300, 
+        "img_size": 30,
+        "n_images": 30, 
         "noise_mean": 0,
         "noise_sd": 0,
     },
