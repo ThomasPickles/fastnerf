@@ -1,0 +1,17 @@
+fastenv/
+__pycache__/
+checkpoints*
+run.log
+nerf_model
+lego/images
+novel_views/
+out/
+jaw/images-black/
+jaw/images-white/
+jaw/images-video/
+tmp/
+# images
+*.png
+*.jpg
+# profile outputs
+*.lprof 
