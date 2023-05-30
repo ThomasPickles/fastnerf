@@ -8,7 +8,7 @@
         "n_frequencies": 10
     },
     "optim": {
-        "training_epochs": 2,
+        "training_epochs": 20,
         "loss": "L2",
         "milestones": [2, 4, 8],
         "gamma": 0.5,
@@ -23,8 +23,8 @@
         "dataset": "walnut",
         "transforms_file": "transforms",
         "ground_truth": "",
-        "img_size": 250,
-        "n_images": 300, 
+        "img_size": 150,
+        "n_images": 200, 
         "noise_mean": 0,
         "noise_sd": 0,
     },
