@@ -17,16 +17,22 @@ def get_voxels_in_slice(z0, device, resolution):
 	voxs = torch.stack([z,y,x],dim=2).reshape(-1, 3)
 	return voxs 
 
-def get_points_in_slice(z0, device, resolution):
-	# initially z=0 slice
+def get_points_in_slice(dim, device, resolution):
 	# actually z slices are square!
 	# WALNUT DIMENSIONS
-	xs = torch.linspace(-35, 35, steps=resolution[0], device=device)
-	ys = torch.linspace(-35, 35, steps=resolution[1], device=device)
+	half_dx = 35./resolution[0]
+	half_dy = 35./resolution[1]
+	d1s = torch.linspace(-35+half_dx, 35-half_dx, steps=resolution[0], device=device)
+	d2s = torch.linspace(-35+half_dy, 35-half_dy, steps=resolution[1], device=device)
 	n_pixels = resolution[0] * resolution[1]
-	x,y = torch.meshgrid(xs, ys, indexing='xy')
-	z = torch.tensor([z0], device=device).expand(n_pixels).reshape(x.shape)
-	points = torch.stack([x,y,z],dim=2).reshape(-1, 3)
+	d1, d2 = torch.meshgrid(d1s, d2s, indexing='xy')
+	d0 = torch.zeros_like(d1) # ([z0], device=device).expand(n_pixels).reshape(x.shape)
+	if dim == 0: # x=0
+		points = torch.stack([d0,d1,d2], dim=2).reshape(-1, 3)
+	if dim == 1: # y=0
+		points = torch.stack([d1,d0,d2], dim=2).reshape(-1, 3)
+	if dim == 2: # z=0
+		points = torch.stack([d1,d2,d0], dim=2).reshape(-1, 3)
 	return points 
 
 

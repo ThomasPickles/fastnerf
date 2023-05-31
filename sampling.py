@@ -9,7 +9,7 @@ def get_samples_around_point(points, box_size, nb_samples):
 	samples = points.unsqueeze(0)
 	jitter = box_size*(torch.rand((nb_samples, nb_points, 3), device=points.device) - 0.5)
 	# output
-	# [nb_points, 3, nb_samples]
+	# [nb_samples, nb_points, 3]
 	return samples + jitter
 
 if __name__ == '__main__':

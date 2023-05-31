@@ -24,6 +24,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="Train model")
 
 	parser.add_argument('config', nargs="?", default="config/small.json", help="Configuration parameters")
+	parser.add_argument("--load_checkpoint", default='', help="Load uuid and bypass training")
 
 	return parser.parse_args()
 
@@ -46,42 +47,43 @@ if __name__ == '__main__':
 
 	c, w, (near,far) = get_params(data_name, h)
 
-	optim = config["optim"]
-	seed = None if optim["random_seed"] else 0
-	random.seed(seed)
-
-	run_name = uuid.uuid4().hex[0:10] if config["output"]["hash_naming"] else f"todo_NAMING_CONVENTION"
-
-	training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
-	if optim["pixel_importance_sampling"]:
-		pixel_weights = training_dataset.get_pixel_values()
-		sampler = WeightedRandomSampler(pixel_weights, len(pixel_weights))
-		data_loader = DataLoader(training_dataset, batch_size=optim["batchsize"], sampler=sampler)
-	else:
-		data_loader = DataLoader(training_dataset, optim["batchsize"], shuffle=True)
-	training_im = training_dataset[:w*h,6:]
-	# my.write_img(, f"out/{run_name}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
-	
 	model = FastNerf(config["encoding"]["n_frequencies"], config["network"]["n_layers"], config["network"]["neurons_per_layer"]).to(device)
 
-	optim = config["optim"]
-	model_optimizer = torch.optim.Adam(model.parameters(), lr=optim["learning_rate"])
-	scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=optim["milestones"], gamma=optim["gamma"])
-	
-	if optim["loss"] == 'L2':
-		loss_function = nn.MSELoss()
+	if not args.load_checkpoint:
+		optim = config["optim"]
+		seed = None if optim["random_seed"] else 0
+		random.seed(seed)
+
+		run_name = uuid.uuid4().hex[0:7] if config["output"]["hash_naming"] else f"todo_NAMING_CONVENTION"
+
+		training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
+		if optim["pixel_importance_sampling"]:
+			pixel_weights = training_dataset.get_pixel_values()
+			sampler = WeightedRandomSampler(pixel_weights, len(pixel_weights))
+			data_loader = DataLoader(training_dataset, batch_size=optim["batchsize"], sampler=sampler)
+		else:
+			data_loader = DataLoader(training_dataset, optim["batchsize"], shuffle=True)
+		training_im = training_dataset[:w*h,6:]
+		# my.write_img(, f"out/{run_name}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
+
+		model_optimizer = torch.optim.Adam(model.parameters(), lr=optim["learning_rate"])
+		scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=optim["milestones"], gamma=optim["gamma"])
+
+		now = time.monotonic()
+		trained_model, training_loss = train(model, model_optimizer, scheduler, data_loader, nb_epochs=optim["training_epochs"], device=device, hn=near, hf=far, nb_bins=optim["samples_per_ray"], loss_function=nn.MSELoss())
+		training_time = time.monotonic() - now
+		timestamp = time.strftime("%Y_%m_%d_%H:%M:%S")
+
+		snapshot_path = f"checkpoints/{run_name}.pt"
+		torch.save(model.state_dict(), snapshot_path)
+		print(f"Training complete. Model weights saved as {snapshot_path}")
 	else:
-		print('Loss not implemented')
-		exit()
-
-	now = time.monotonic()
-	trained_model, training_loss = train(model, model_optimizer, scheduler, data_loader, nb_epochs=optim["training_epochs"], device=device, hn=near, hf=far, nb_bins=optim["samples_per_ray"], loss_function=loss_function)
-	training_time = time.monotonic() - now
-	timestamp = time.strftime("%Y_%m_%d_%H:%M:%S")
-
-	snapshot_path = f"checkpoints/{run_name}.pt"
-	torch.save(model.state_dict(), snapshot_path)
-	print(f"Training complete. Model weights saved as {snapshot_path}")
+		run_name = args.load_checkpoint
+		snapshot_path = f"checkpoints/{run_name}.pt"
+		training_loss = None # no info
+		trained_model = model
+		trained_model.load_state_dict(torch.load(snapshot_path))
+		trained_model.eval()
 
 	has_gt = False # TODO: fix ground truth True if (args.dataset == 'jaw') else False 
 	if has_gt:
@@ -135,12 +137,18 @@ if __name__ == '__main__':
 
 	if output["slices"]:
 		# for idx in range(100):
-		for idx in range(50,51):
-			z = int(3.3*idx) if is_voxel_grid else idx - 50
-			resolution = (output["slice_resolution"], output["slice_resolution"]) # TODO: link to config
-			img = render_slice(model=trained_model, z=z, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
-			img = img.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-			my.write_img(img, f'out/{run_name}_slice_horizontal.png', verbose=True)
+		# for idx in range(50,51):
+		# 	z = int(3.3*idx) if is_voxel_grid else idx - 50
+		resolution = (output["slice_resolution"], output["slice_resolution"]) # TODO: link to config
+		slice_x = render_slice(model=trained_model, dim=0, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
+		slice_x = slice_x.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
+		my.write_img(slice_x, f'out/{run_name}_slice_x.png', verbose=True)
+		slice_y = render_slice(model=trained_model, dim=1, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
+		slice_y = slice_y.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
+		my.write_img(slice_y, f'out/{run_name}_slice_y.png', verbose=True)
+		slice_z = render_slice(model=trained_model, dim=2, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
+		slice_z = slice_z.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
+		my.write_img(slice_z, f'out/{run_name}_slice_z.png', verbose=True)
 		# no video because just slices
 		# sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{run_name}_%03d.png out/{run_name}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 		# os.system(sys_command)

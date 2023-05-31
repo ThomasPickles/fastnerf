@@ -39,16 +39,16 @@ def get_ray_sigma(model, points, device):
 	return sigma
 
 @torch.no_grad()
-def render_slice(model, z, device, resolution, voxel_grid, samples_per_point):
-	if voxel_grid:
-		vox = get_voxels_in_slice(z, device, resolution)
-		points = local_to_world(vox)
-	else:
-		points = get_points_in_slice(z, device, resolution)
+def render_slice(model, dim, device, resolution, voxel_grid, samples_per_point):
+	# if voxel_grid:
+	# 	vox = get_voxels_in_slice(z, device, resolution)
+	# 	points = local_to_world(vox)
+	# else:
+	points = get_points_in_slice(dim, device, resolution)
 	nb_points = points.shape[0]
 	delta = 70. / resolution[0] # for walnut
 	points = points.to('cpu') # this might be too big for gpu memory once we add in the samples, so we'll batch them up and then put the batches on the gpu one at a time
-	samples = get_samples_around_point(points, delta, samples_per_point) # [nb_points, 3, nb_samples]
+	samples = get_samples_around_point(points, delta, samples_per_point) # [nb_samples, nb_points, 3]
 	sigma = torch.empty((0,1), device='cpu')
 	samples = samples.reshape(nb_points*samples_per_point,3)
 	samples_dataset = SamplesDataset(samples)

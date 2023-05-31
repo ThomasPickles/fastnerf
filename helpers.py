@@ -48,10 +48,11 @@ def write_imgs(data, path, title=None, show_training_img=False):
 		ax.set_title(sub_tit)
 
 	# curve
-	ax = fig.add_subplot(gs[1, :])
-	ax.plot(moving_average(curve,10))
-	ax.set_ylabel('dB')
-	ax.invert_yaxis()
+	if curve:
+		ax = fig.add_subplot(gs[1, :])
+		ax.plot(moving_average(curve,10))
+		ax.set_ylabel('dB')
+		ax.invert_yaxis()
 
 	# ray
 	ax = fig.add_subplot(gs[0, n_cols-1])
