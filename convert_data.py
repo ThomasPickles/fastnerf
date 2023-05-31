@@ -78,24 +78,30 @@ class BlenderDataset(Dataset):
             # just taking red channel here!
             img = img[:,1]
         elif self.n_chan == 1:
-            assert img.shape == (1, h, w)
+            img = img.squeeze() 
             # walnut imgs needs to be shifted 0.22% to the left
+        assert img.shape == (h, w)
 
         noise = Image.effect_noise(self.img_wh, self.noise_sd)
-        noise = self.transform(noise)
+        noise = self.transform(noise).squeeze()
         img = (img + self.noise_level*(noise - 0.5)).clamp(0,1) # noise centred at 0.5
 
-        # ray direction is normalised
-        # jitter = torch.rand_like(self.directions) - 0.5
-        # jitter[...,2] = 0 # no jitter in z direction
-        
-        interpolated_img = img
-        # jitter / self.focal
+        # TODO: add bilinear interpolation into training data
+        # jitter = torch.rand_like(self.directions[1:-1,1:-1,:]) - 0.5
+        # jitter[...,2] = 0 # no in-plane jitter
+        # jx = jitter[...,0]
+        # jy = jitter[...,1]
+        # assert jx.shape == jy.shape
+        # interpolated_img = torch.zeros_like(img)
+        # # bilinear interpolation, ignore cells around the boundary
+        # interpolated_img[1:-1,1:-1] = (1-jx)*(1-jy)*img[:-1,:-1] + (1-jx)*jy*img[:-1,1:] + jx*(1-jy)*img[1:,:-1] + jx*jy*img[1:,1:]
+        # img = interpolated_img
+        # rays_o, rays_d = get_rays(self.directions + jitter / self.focal, c2w) # both (h*w, 3)
+        rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
 
         img = img.view(1, -1).permute(1, 0) # (h*w, 1) RGB
         assert img.shape == (self.img_wh[1]* self.img_wh[0], 1)
 
-        rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
         return rays_o, rays_d, img
 
 
