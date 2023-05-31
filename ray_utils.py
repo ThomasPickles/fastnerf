@@ -16,11 +16,12 @@ def get_ray_directions(H, W, focal):
     """
     grid = create_meshgrid(H, W, normalized_coordinates=False)[0]
     i, j = grid.unbind(-1)
+    # Added in the 0.5 pixel correction
     # the direction here is without +0.5 pixel centering as calibration is not so accurate
     # see https://github.com/bmild/nerf/issues/24
     directions = \
-        torch.stack([(i-W/2)/focal, -(j-H/2)/focal, -torch.ones_like(i)], -1) # (H, W, 3)
-
+        torch.stack([(i+0.5-W/2.)/focal, -(j+0.5-H/2.)/focal, -torch.ones_like(i)], -1) # (H, W, 3)
+        
     return directions
 
 

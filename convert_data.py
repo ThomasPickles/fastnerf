@@ -37,8 +37,7 @@ class BlenderDataset(Dataset):
         self.focal *= w/w_orig # modify focal length to match size self.img_wh
         
         # ray directions for all pixels, same for all images (same H, W, focal)
-        self.directions = \
-            get_ray_directions(h, w, self.focal) # (h, w, 3)
+        self.directions = get_ray_directions(h, w, self.focal) # (h, w, 3)
             
         self.image_paths = []
         self.poses = []
@@ -46,12 +45,7 @@ class BlenderDataset(Dataset):
         self.all_rgbs = []
         
         if (self.split == 'train'):
-            # since we add random noise to the images, we need
-            # to save them all to self.data, since otherwise
-            # if we added noise a second time (for multiple epochs
-            # for example) it would be a different training image,
-            # and although it would probably converge better,
-            # it wouldn't be a fair test.
+            
             frames = self.meta['frames']
             for frame in random.sample(frames, self.n_train):
                 rays_o, rays_d, img = self.process_frame(frame)
@@ -63,6 +57,7 @@ class BlenderDataset(Dataset):
             assert torch.max(self.all_rgbs) <= 1.0 # should all be between 0 and 1
             # NOTE: we could put the near and far bounds in here too, if we want
             self.data = torch.cat((self.all_rays[:,:6],self.all_rgbs[:,:]),1)
+            print(f"Training data shape: {self.data.shape}")
 
     def process_frame(self, frame):
         pose = np.array(frame['transform_matrix'])[:3, :4]
@@ -74,22 +69,32 @@ class BlenderDataset(Dataset):
         # https://pillow.readthedocs.io/en/stable/handbook/concepts.html#PIL.Image.LANCZOS
         img = img.resize(self.img_wh, Image.LANCZOS) # lanczos is best for downsampling
         img = self.transform(img) # (4, h, w)
-        if self.n_chan == 4:
-            assert img.shape == (4, h, w)
-            img = img.view(4, -1).permute(1, 0) # (h*w, 4) RGBA
-            img = img[:, :3]*img[:, -1:] + (1-img[:, -1:]) # blend A to RGB
-        elif self.n_chan == 3: # no alpha
-            img = img.view(3, -1).permute(1, 0) # (h*w, 3) RGB
+        w, h = self.img_wh
+        # if self.n_chan == 4:
+        #     assert img.shape == (4, h, w)
+        #     img = img.view(4, -1).permute(1, 0) # (h*w, 4) RGBA
+        #     img = img[:, :3]*img[:, -1:] + (1-img[:, -1:]) # blend A to RGB
+        if self.n_chan == 3: # no alpha
+            # just taking red channel here!
+            img = img[:,1]
         elif self.n_chan == 1:
-            img = img.expand(3, -1, -1).view(3,-1).permute(1,0) # (h*w, 3) RGB
+            assert img.shape == (1, h, w)
+            # walnut imgs needs to be shifted 0.22% to the left
+
         noise = Image.effect_noise(self.img_wh, self.noise_sd)
         noise = self.transform(noise)
-        noise -= 0.5 # noise centred at 0.5
-        noise = noise.expand(3,-1,-1).view(3, -1).permute(1, 0)
-
-        img = (img + self.noise_level*noise).clamp(0,1)
+        img = (img + self.noise_level*(noise - 0.5)).clamp(0,1) # noise centred at 0.5
 
         # ray direction is normalised
+        # jitter = torch.rand_like(self.directions) - 0.5
+        # jitter[...,2] = 0 # no jitter in z direction
+        
+        interpolated_img = img
+        # jitter / self.focal
+
+        img = img.view(1, -1).permute(1, 0) # (h*w, 1) RGB
+        assert img.shape == (self.img_wh[1]* self.img_wh[0], 1)
+
         rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
         return rays_o, rays_d, img
 
