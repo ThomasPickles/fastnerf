@@ -1,0 +1,44 @@
+// run time?
+{
+    "network": {
+        "n_layers": 8,
+        "neurons_per_layer": 384
+    },
+    "encoding": {
+        "otype": "Frequency",
+        "n_frequencies": 10
+    },
+    "optim": {
+        "training_epochs": 20,
+        "loss": "L2",
+        "milestones": [2, 4, 8, 12],
+        "gamma": 0.5,
+        "batchsize": 1024,
+        "samples_per_ray": 192,
+        "learning_rate": 0.001,
+        "pixel_importance_sampling": false,
+        "random_seed": false,
+        "interpolate_training_images": true
+    },
+    "data": {
+        "dataset": "walnut",
+        "transforms_file": "transforms",
+        "ground_truth": "",
+        "img_size": 200,
+        "n_images": 30, 
+        "noise_mean": 0,
+        "noise_sd": 0,
+    },
+    "output": {
+        "images": true,
+        "slices": true,
+        "samples_per_ray": 192,
+        "slice_resolution": 800,
+        "rays_per_pixel": 64,
+        "hash_naming": true
+    },
+    "hardware": {
+        "train": "cuda",
+        "test": "cuda"
+    }
+}
