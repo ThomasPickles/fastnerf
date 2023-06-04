@@ -23,7 +23,7 @@ import commentjson as json
 def parse_args():
 	parser = argparse.ArgumentParser(description="Train model")
 
-	parser.add_argument('config', nargs="?", default="config/small.json", help="Configuration parameters")
+	parser.add_argument('config', nargs="?", default="config/test_config.json", help="Configuration parameters")
 	parser.add_argument("--load_checkpoint", default='', help="Load uuid and bypass training")
 
 	return parser.parse_args()
@@ -42,12 +42,13 @@ if __name__ == '__main__':
 	data_name = data_config["dataset"]
 	h = data_config["img_size"]
 
-	if h < 100:
-		print(f"Warning: low res images can lead to jaggies in training")
+	c, scale, object_size, aspect_ratio = get_params(data_name)
 
-	c, w, (near,far) = get_params(data_name, h)
+	w = int(h*aspect_ratio)
+	near = scale - object_size
+	far = scale + object_size
 
-	model = FastNerf(config["encoding"]["n_frequencies"], config["network"]["n_layers"], config["network"]["neurons_per_layer"]).to(device)
+	model = FastNerf(config["encoding"], config["network"]).to(device)
 
 	if not args.load_checkpoint:
 		optim = config["optim"]
@@ -84,6 +85,8 @@ if __name__ == '__main__':
 		trained_model = model
 		trained_model.load_state_dict(torch.load(snapshot_path))
 		trained_model.eval()
+
+	# TODO: RENDER SLICES DURING TRAINING, SO WE SEE CONVERGENCEZ
 
 	has_gt = False # TODO: fix ground truth True if (args.dataset == 'jaw') else False 
 	if has_gt:

@@ -94,7 +94,6 @@ def render_image(model, frame, **params):
 @torch.no_grad()
 def test_model(model, dataset, img_index, **render_params):
 	frame = dataset[img_index]
-	print(frame.shape)
 
 	img_tensor = render_image(model, frame, **render_params)
 

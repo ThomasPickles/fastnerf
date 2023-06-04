@@ -1,18 +1,17 @@
-def get_params(d, h):
-    assert ((d == 'lego') or (d == 'jaw') or (d == 'walnut')) 
-    if d == 'lego':
-        # RGBA
-        return 4, h, (2,6) # channels, width
-    elif d == 'walnut':
-        aspect_ratio = 2240/2368 
+def get_params(d):
+    assert ((d == 'jaw') or (d == 'walnut')) 
+    if d == 'walnut':
+        aspect_ratio = 2240./2368. 
         # angle of view
-        near = 349 - 39 # camera is on a circle 343 from origin at (x,y,0)
-        far = 349 + 39 # 150 is approx
-        return 1, int(h*aspect_ratio), (near,far)
+        # camera is on a circle 343 from origin at (x,y,0)
+        scale = 349
+        object_size = 39 # safer to overestimate
+        return 1, scale, object_size, aspect_ratio
     elif d == 'jaw':
         # sRBA
-        aspect_ratio = 275/331
+        aspect_ratio = 275./331.
         # angle of view
-        near = 163 - 60 # camera is on a circle 163 from origin at (x,y,0)
-        far = 163 + 60 # 50 is approx
-        return 3, int(h*aspect_ratio), (near,far)
+        # camera is on a circle 163 from origin at (x,y,0)
+        scale = 163
+        object_size = 60 # safer to overestimate
+        return 3, scale, object_size, aspect_ratio

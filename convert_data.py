@@ -70,16 +70,12 @@ class BlenderDataset(Dataset):
         img = img.resize(self.img_wh, Image.LANCZOS) # lanczos is best for downsampling
         img = self.transform(img) # (4, h, w)
         w, h = self.img_wh
-        # if self.n_chan == 4:
-        #     assert img.shape == (4, h, w)
-        #     img = img.view(4, -1).permute(1, 0) # (h*w, 4) RGBA
-        #     img = img[:, :3]*img[:, -1:] + (1-img[:, -1:]) # blend A to RGB
         if self.n_chan == 3: # no alpha
             # just taking red channel here!
             img = img[:,1]
         elif self.n_chan == 1:
+            #TODO: walnut imgs needs to be shifted 0.22% to the left
             img = img.squeeze() 
-            # walnut imgs needs to be shifted 0.22% to the left
         assert img.shape == (h, w)
 
         noise = Image.effect_noise(self.img_wh, self.noise_sd)

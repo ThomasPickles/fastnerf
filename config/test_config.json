@@ -1,0 +1,47 @@
+// training time of 30 sec on slurm
+// 2 epochs * 30 img * 30**2 
+{
+    "network": {
+        // note: fewer layers need a smaller learning rate
+        "n_layers": 3,
+        "neurons_per_layer": 30
+    },
+    "encoding": {
+        "otype": "Frequency",
+        "n_frequencies": 5
+    },
+    "optim": {
+        "training_epochs": 200,
+        "loss": "L2",
+        // TODO: fiddle with milestones to improve speed of convergence?
+        "milestones": [20, 40],
+        "gamma": 0.5,
+        "batchsize": 1024,
+        "samples_per_ray": 92,
+        "learning_rate": 0.001,
+        "pixel_importance_sampling": false,
+        "random_seed": false,
+        "interpolate_training_images": true
+    },
+    "data": {
+        "dataset": "walnut",
+        "transforms_file": "transforms",
+        "ground_truth": "",
+        "img_size": 10,
+        "n_images": 20, 
+        "noise_mean": 0,
+        "noise_sd": 0,
+    },
+    "output": {
+        "images": true,
+        "slices": true,
+        "samples_per_ray": 92,
+        "slice_resolution": 200,
+        "rays_per_pixel": 4,
+        "hash_naming": true
+    },
+    "hardware": {
+        "train": "cuda",
+        "test": "cuda"
+    }
+}
