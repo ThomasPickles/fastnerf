@@ -6,9 +6,11 @@ import os
 from PIL import Image
 from torchvision import transforms as T
 from torchvision import io
+import imageio # can read 16-bit tif files, but PIL can't yet
 import random
 
 from ray_utils import *
+from img_helpers import NerfImage
 from helpers import write_img
 
 class BlenderDataset(Dataset):
@@ -33,11 +35,12 @@ class BlenderDataset(Dataset):
         h_orig = self.meta['h']
         w, h = self.img_wh
 
+        # NOTE: w_orig just drops out of this
         self.focal = 0.5*w_orig/np.tan(0.5*self.meta['camera_angle_x'])
         self.focal *= w/w_orig # modify focal length to match size self.img_wh
         
         # ray directions for all pixels, same for all images (same H, W, focal)
-        self.directions = get_ray_directions(h, w, self.focal) # (h, w, 3)
+        self.directions, self.pix_x, self.pix_y = get_ray_directions(h, w, self.focal) # (h, w, 3)
             
         self.image_paths = []
         self.poses = []
@@ -48,7 +51,9 @@ class BlenderDataset(Dataset):
             
             frames = self.meta['frames']
             for frame in random.sample(frames, self.n_train):
-                rays_o, rays_d, img = self.process_frame(frame)
+
+                rays_o, rays_d = self.process_rays(frame)
+                img = self.process_image(frame)
                 self.all_rgbs += [img]
                 self.all_rays += [torch.cat([rays_o, rays_d],1)] # (h*w, 6)
             
@@ -59,28 +64,35 @@ class BlenderDataset(Dataset):
             self.data = torch.cat((self.all_rays[:,:6],self.all_rgbs[:,:]),1)
             print(f"Training data shape: {self.data.shape}")
 
-    def process_frame(self, frame):
+    def process_rays(self, frame):
         pose = np.array(frame['transform_matrix'])[:3, :4]
+        # print(f"pose (BEFORE): {pose}")
+        # pose[:,3] = pose[:,3] / self.scale # RESCALE POSITION
+        # print(f"pose (AFTER): {pose}")
         self.poses += [pose]
         c2w = torch.FloatTensor(pose)
-        image_path = os.path.join(self.root_dir, f"{frame['file_path']}.png")
-        self.image_paths += [image_path]
-        img = Image.open(image_path)
-        # https://pillow.readthedocs.io/en/stable/handbook/concepts.html#PIL.Image.LANCZOS
-        img = img.resize(self.img_wh, Image.LANCZOS) # lanczos is best for downsampling
-        img = self.transform(img) # (4, h, w)
-        w, h = self.img_wh
-        if self.n_chan == 3: # no alpha
-            # just taking red channel here!
-            img = img[:,1]
-        elif self.n_chan == 1:
-            #TODO: walnut imgs needs to be shifted 0.22% to the left
-            img = img.squeeze() 
-        assert img.shape == (h, w)
+        rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
+        # rescale origin
+        return rays_o, rays_d
 
-        noise = Image.effect_noise(self.img_wh, self.noise_sd)
-        noise = self.transform(noise).squeeze()
-        img = (img + self.noise_level*(noise - 0.5)).clamp(0,1) # noise centred at 0.5
+
+    def process_image(self, frame):
+        # TODO: tif or png!
+        image_path = os.path.join(self.root_dir, f"{frame['file_path']}.tif")
+        self.image_paths += [image_path]
+        img_transform = lambda img: -np.log(img)
+        img = NerfImage(image_path, img_transform)
+        # if self.n_chan == 3: # no alpha
+        #     # just taking red channel here!
+        #     img = img[:,1]
+        # elif self.n_chan == 1:
+        #     #TODO: walnut imgs needs to be shifted 0.22% to the left
+        #     img = img.squeeze() 
+        # assert img.shape == (h, w)
+
+        # noise = Image.effect_noise(self.img_wh, self.noise_sd)
+        # noise = self.transform(noise).squeeze()
+        # img = (img + self.noise_level*(noise - 0.5)).clamp(0,1) # noise centred at 0.5
 
         # TODO: add bilinear interpolation into training data
         # jitter = torch.rand_like(self.directions[1:-1,1:-1,:]) - 0.5
@@ -93,12 +105,19 @@ class BlenderDataset(Dataset):
         # interpolated_img[1:-1,1:-1] = (1-jx)*(1-jy)*img[:-1,:-1] + (1-jx)*jy*img[:-1,1:] + jx*(1-jy)*img[1:,:-1] + jx*jy*img[1:,1:]
         # img = interpolated_img
         # rays_o, rays_d = get_rays(self.directions + jitter / self.focal, c2w) # both (h*w, 3)
-        rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
+        
+        px = []
+        x_vals = torch.flatten(self.pix_x).numpy()
+        y_vals = torch.flatten(self.pix_y).numpy()
+        for x_val, y_val in zip(x_vals, y_vals): 
+            px += [img.get_pixel_normalised(x_val, y_val)]
+
+        img = torch.tensor(px)
 
         img = img.view(1, -1).permute(1, 0) # (h*w, 1) RGB
         assert img.shape == (self.img_wh[1]* self.img_wh[0], 1)
 
-        return rays_o, rays_d, img
+        return img
 
 
     def define_transforms(self):
@@ -117,6 +136,8 @@ class BlenderDataset(Dataset):
         if (self.split == 'train'):
             return self.data[idx]
         if ((self.split == 'test') or (self.split == 'video')):
-            rays_o, rays_d, img = self.process_frame(self.meta['frames'][idx])
+            frame = self.meta['frames'][idx]
+            rays_o, rays_d = self.process_rays(frame)
+            img = self.process_image(frame)
             rays = torch.cat([rays_o, rays_d, img],1)
             return rays

@@ -22,7 +22,7 @@ def get_ray_directions(H, W, focal):
     directions = \
         torch.stack([(i+0.5-W/2.)/focal, -(j+0.5-H/2.)/focal, -torch.ones_like(i)], -1) # (H, W, 3)
         
-    return directions
+    return directions, (i+0.5)/W, (j+0.5)/H
 
 
 def get_rays(directions, c2w):
