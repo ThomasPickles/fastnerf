@@ -14,11 +14,12 @@ from img_helpers import NerfImage
 from helpers import write_img
 
 class BlenderDataset(Dataset):
-    def __init__(self, root_dir, filename, split, img_wh, n_chan, noise_level=0, noise_sd=0, n_train=0):
+    def __init__(self, root_dir, filename, split, img_wh, scale, n_chan, noise_level=0, noise_sd=0, n_train=0):
         self.root_dir = root_dir
         self.filename = filename
         self.split = split
         self.n_chan = n_chan
+        self.scale = scale
         self.noise_level = noise_level
         self.noise_sd = noise_sd
         self.img_wh = img_wh
@@ -31,24 +32,22 @@ class BlenderDataset(Dataset):
                                f"{self.filename}_{self.split}.json"), 'r') as f:
             self.meta = json.load(f)
 
-        w_orig = self.meta['w']
-        h_orig = self.meta['h']
-        w, h = self.img_wh
 
-        # NOTE: w_orig just drops out of this
-        self.focal = 0.5*w_orig/np.tan(0.5*self.meta['camera_angle_x'])
-        self.focal *= w/w_orig # modify focal length to match size self.img_wh
-        
+        # self.focal = 0.5*w/np.tan(0.5*self.meta['camera_angle_x'])
+        # FIXME: take image width out of focal length?
+        self.focal = 0.5/np.tan(0.5*self.meta['camera_angle_x'])
+
+        print(f"focal: {self.focal}")
         # ray directions for all pixels, same for all images (same H, W, focal)
-        self.directions, self.pix_x, self.pix_y = get_ray_directions(h, w, self.focal) # (h, w, 3)
-            
+        self.directions, self.pix_x, self.pix_y = get_ray_directions(self.img_wh[1], self.img_wh[0], self.focal) # (h, w, 3)
+
         self.image_paths = []
         self.poses = []
         self.all_rays = []
         self.all_rgbs = []
-        
+
         if (self.split == 'train'):
-            
+
             frames = self.meta['frames']
             for frame in random.sample(frames, self.n_train):
 
@@ -56,12 +55,12 @@ class BlenderDataset(Dataset):
                 img = self.process_image(frame)
                 self.all_rgbs += [img]
                 self.all_rays += [torch.cat([rays_o, rays_d],1)] # (h*w, 6)
-            
+
             self.all_rays = torch.cat(self.all_rays, 0) # (len(self.meta['frames])*h*w, 8)
             self.all_rgbs = torch.cat(self.all_rgbs, 0) # (len(self.meta['frames])*h*w, 3)
             assert torch.max(self.all_rgbs) <= 1.0 # should all be between 0 and 1
-            # NOTE: we could put the near and far bounds in here too, if we want
             self.data = torch.cat((self.all_rays[:,:6],self.all_rgbs[:,:]),1)
+
             print(f"Training data shape: {self.data.shape}")
 
     def process_rays(self, frame):
@@ -73,6 +72,7 @@ class BlenderDataset(Dataset):
         c2w = torch.FloatTensor(pose)
         rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
         # rescale origin
+        rays_o = rays_o / self.scale # rescale scene
         return rays_o, rays_d
 
 
@@ -105,11 +105,11 @@ class BlenderDataset(Dataset):
         # interpolated_img[1:-1,1:-1] = (1-jx)*(1-jy)*img[:-1,:-1] + (1-jx)*jy*img[:-1,1:] + jx*(1-jy)*img[1:,:-1] + jx*jy*img[1:,1:]
         # img = interpolated_img
         # rays_o, rays_d = get_rays(self.directions + jitter / self.focal, c2w) # both (h*w, 3)
-        
+
         px = []
         x_vals = torch.flatten(self.pix_x).numpy()
         y_vals = torch.flatten(self.pix_y).numpy()
-        for x_val, y_val in zip(x_vals, y_vals): 
+        for x_val, y_val in zip(x_vals, y_vals):
             px += [img.get_pixel_normalised(x_val, y_val)]
 
         img = torch.tensor(px)

@@ -14,7 +14,7 @@
         "training_epochs": 200,
         "loss": "L2",
         // TODO: fiddle with milestones to improve speed of convergence?
-        "milestones": [20, 40],
+        "milestones": [200, 400],
         "gamma": 0.5,
         "batchsize": 1024,
         "samples_per_ray": 92,
@@ -27,7 +27,7 @@
         "dataset": "walnut",
         "transforms_file": "transforms",
         "ground_truth": "",
-        "img_size": 10,
+        "img_size": 20,
         "n_images": 20, 
         "noise_mean": 0,
         "noise_sd": 0,

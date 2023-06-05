@@ -45,8 +45,12 @@ if __name__ == '__main__':
 	c, scale, object_size, aspect_ratio = get_params(data_name)
 
 	w = int(h*aspect_ratio)
-	near = scale - object_size
-	far = scale + object_size
+	# near = 1. - object_size / scale
+	# far = 1. + object_size / scale
+	# near = (scale - object_size) / scale
+	near = 0
+	# far = (scale + object_size ) / scale
+	far = 2
 
 	model = FastNerf(config["encoding"], config["network"]).to(device)
 
@@ -57,7 +61,7 @@ if __name__ == '__main__':
 
 		run_name = uuid.uuid4().hex[0:7] if config["output"]["hash_naming"] else f"todo_NAMING_CONVENTION"
 
-		training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
+		training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), scale=scale, n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
 		if optim["pixel_importance_sampling"]:
 			pixel_weights = training_dataset.get_pixel_values()
 			sampler = WeightedRandomSampler(pixel_weights, len(pixel_weights))
@@ -99,7 +103,7 @@ if __name__ == '__main__':
 	
 	if output["images"]:
 		# no noise in test data
-		testing_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="test", img_wh=(w,h), n_chan=c)
+		testing_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="test", img_wh=(w,h), scale=scale, n_chan=c)
 		for img_index in range(3):
 			test_loss, imgs = test_model(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=test_device, nb_bins=output["samples_per_ray"], H=h, W=w)
 			cpu_imgs = [img.data.cpu().numpy().reshape(h, w) for img in imgs]

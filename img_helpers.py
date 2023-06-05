@@ -9,21 +9,20 @@ class NerfImage():
         numpy_image = io.imread(path)
         dtype = numpy_image.dtype
         h, w = numpy_image.shape 
-        # walnut images are misaligned by 5 pixels.  correct it here
-        numpy_image = np.roll(numpy_image, 5, axis=0) # TODO: check this
+        assert h > w, 'data might be wrong way round!'
+        # walnut images need to be shifted left by 5 pixels.  correct it here
+        numpy_image = np.roll(numpy_image, -5, axis=1) # TODO: check this
         img = img_transform(numpy_image)
         background = 0.25*(img[0,0]+img[h-1,0]+img[h-1,w-1]+img[0,w-1])
         img -= background
         # clamp background values to zero
-        img = exposure.rescale_intensity(img, in_range=(0.1, 1.8), out_range=(0.,1.))
-        print("min, max (after):", img.min(), img.max())
-        img = transform.rescale(img, 0.1, anti_aliasing=True)
-        # TODO: if we want to decrease res, do it here
-        # print(self.image)
-        # put inside a pillow wrapper to take advantage of interpolation
+        dark_correction = -0.05
+        img = exposure.rescale_intensity(img, in_range=(dark_correction, 1.8), out_range=(0.,1.))
+        # rescale to 10%
+        img = transform.rescale(img, 0.01, anti_aliasing=True)
         self.image = img
         self.h, self.w = self.image.shape
-        print(f"img height, width: {self.h}, {self.w}")
+        assert self.h > self.w, 'data might be wrong way round!'
 
     def get_pixel_normalised(self, x, y):
         # read 5 pixels to right (circular)

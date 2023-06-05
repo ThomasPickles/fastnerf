@@ -20,10 +20,10 @@ def get_voxels_in_slice(z0, device, resolution):
 def get_points_in_slice(dim, device, resolution):
 	# actually z slices are square!
 	# WALNUT DIMENSIONS
-	half_dx = 35./resolution[0]
-	half_dy = 35./resolution[1]
-	d1s = torch.linspace(-35+half_dx, 35-half_dx, steps=resolution[0], device=device)
-	d2s = torch.linspace(-35+half_dy, 35-half_dy, steps=resolution[1], device=device)
+	half_dx = 1./resolution[0]
+	half_dy = 1./resolution[1]
+	d1s = torch.linspace(-1.+half_dx, 1.-half_dx, steps=resolution[0], device=device)
+	d2s = torch.linspace(-1.+half_dy, 1.-half_dy, steps=resolution[1], device=device)
 	n_pixels = resolution[0] * resolution[1]
 	d1, d2 = torch.meshgrid(d1s, d2s, indexing='xy')
 	d0 = torch.zeros_like(d1) # ([z0], device=device).expand(n_pixels).reshape(x.shape)
