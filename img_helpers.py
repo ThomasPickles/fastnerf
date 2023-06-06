@@ -1,5 +1,4 @@
-import imageio
-from scipy.interpolate import interpn
+# from scipy.interpolate import interpn
 from skimage import io
 from skimage import exposure, transform # supports 16-bit tiff
 
