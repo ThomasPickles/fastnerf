@@ -6,7 +6,7 @@ from skimage import exposure, transform # supports 16-bit tiff
 import numpy as np
 
 class NerfImage():
-    def __init__(self, path, img_transform, scale_factor):
+    def __init__(self, path, img_transform, im_wh):
         numpy_image = io.imread(path)
         dtype = numpy_image.dtype
         h, w = numpy_image.shape 
@@ -20,7 +20,7 @@ class NerfImage():
         dark_correction = -0.05
         img = exposure.rescale_intensity(img, in_range=(dark_correction, 1.8), out_range=(0.,1.))
         # rescale
-        img = transform.rescale(img, scale_factor, anti_aliasing=True)
+        img = transform.resize(img, im_wh, anti_aliasing=True)
         self.image = img
         self.h, self.w = self.image.shape
         assert self.h > self.w, 'data might be wrong way round!'

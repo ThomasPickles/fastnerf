@@ -40,8 +40,8 @@ class FastNerf(nn.Module):
 	def positional_encoding(x, L):
 		out = [x]
 		for j in range(L):
-			out.append(torch.sin(2 ** j * x / 10.))
-			out.append(torch.cos(2 ** j * x / 10.))
+			out.append(torch.sin(2 ** j * x))
+			out.append(torch.cos(2 ** j * x))
 		return torch.cat(out, dim=1)
 
 	def forward(self, o):

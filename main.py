@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
 	w = int(h*aspect_ratio)
 	# t = 1 should go right through the centre
-	near = 1. - object_size / scale
-	far = 1. + object_size / scale
+	near = 1. - 1.5 * object_size / scale
+	far = 1. + 1.5 * object_size / scale
 	
 
 	model = FastNerf(config["encoding"], config["network"]).to(device)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
 	# TODO: RENDER SLICES DURING TRAINING, SO WE SEE CONVERGENCEZ
 
-	has_gt = False # TODO: fix ground truth True if (args.dataset == 'jaw') else False 
+	has_gt = False
 	if has_gt:
 		phantom = np.load("jaw/jaw_phantom.npy")
 
@@ -146,14 +146,14 @@ if __name__ == '__main__':
 		# for idx in range(100):
 		# for idx in range(50,51):
 		# 	z = int(3.3*idx) if is_voxel_grid else idx - 50
-		resolution = (output["slice_resolution"], output["slice_resolution"]) # TODO: link to config
-		slice_x = render_slice(model=trained_model, dim=0, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
+		resolution = (output["slice_resolution"], output["slice_resolution"])
+		slice_x = render_slice(model=trained_model, dim=0, device=test_device, resolution=resolution, limit=object_size / scale, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
 		slice_x = slice_x.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
 		my.write_img(slice_x, f'out/{run_name}_slice_x.png', verbose=True)
-		slice_y = render_slice(model=trained_model, dim=1, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
+		slice_y = render_slice(model=trained_model, dim=1, device=test_device, resolution=resolution, limit=object_size / scale, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
 		slice_y = slice_y.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
 		my.write_img(slice_y, f'out/{run_name}_slice_y.png', verbose=True)
-		slice_z = render_slice(model=trained_model, dim=2, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
+		slice_z = render_slice(model=trained_model, dim=2, device=test_device, resolution=resolution, limit=object_size / scale, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
 		slice_z = slice_z.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
 		my.write_img(slice_z, f'out/{run_name}_slice_z.png', verbose=True)
 		# no video because just slices

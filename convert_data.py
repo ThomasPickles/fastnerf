@@ -32,10 +32,13 @@ class BlenderDataset(Dataset):
                                f"{self.filename}_{self.split}.json"), 'r') as f:
             self.meta = json.load(f)
 
-
-        radius_over_detector_width =  self.scale / self.img_wh[0] 
-        self.focal = 0.5*radius_over_detector_width/np.tan(0.5*self.meta['camera_angle_x'])
-        print(f"Rescaled focal length is {self.focal}")
+        # This is not really a focal length.
+        # It's a rescaling because I haven't 
+        # had the courage to modify the get_ray_directions
+        # function to produce the output I want
+        detector_width =  self.img_wh[0] 
+        # Checking the z-positions of the rays, they are much too high
+        self.focal = 0.5*detector_width/np.tan(0.5*self.meta['camera_angle_x'])
         
         # ray directions for all pixels, same for all images (same H, W, focal)
         self.directions, self.pix_x, self.pix_y = get_ray_directions(self.img_wh[1], self.img_wh[0], self.focal) # (h, w, 3)
@@ -80,9 +83,7 @@ class BlenderDataset(Dataset):
         self.image_paths += [image_path]
         img_transform = lambda img: -np.log(img)
 
-        full_res = 2348.
-        scale = self.img_wh[0] / full_res 
-        img = NerfImage(image_path, img_transform, scale)
+        img = NerfImage(image_path, img_transform, (self.img_wh[1],self.img_wh[0]))
 
         # noise = Image.effect_noise(self.img_wh, self.noise_sd)
         # noise = self.transform(noise).squeeze()
@@ -104,7 +105,7 @@ class BlenderDataset(Dataset):
 
         px = []
         # TODO: no need to load as torch then convert to numpy!
-        x_vals = torch.flatten(self.pix_x).numpy()
+        x_vals = torch.flatten(self.pix_x).numpy() # [h*w]
         y_vals = torch.flatten(self.pix_y).numpy()
         for x_val, y_val in zip(x_vals, y_vals):
             px += [img.get_pixel_normalised(x_val, y_val)]
