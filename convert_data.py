@@ -33,11 +33,10 @@ class BlenderDataset(Dataset):
             self.meta = json.load(f)
 
 
-        # self.focal = 0.5*w/np.tan(0.5*self.meta['camera_angle_x'])
-        # FIXME: take image width out of focal length?
-        self.focal = 0.5/np.tan(0.5*self.meta['camera_angle_x'])
-
-        print(f"focal: {self.focal}")
+        radius_over_detector_width =  self.scale / self.img_wh[0] 
+        self.focal = 0.5*radius_over_detector_width/np.tan(0.5*self.meta['camera_angle_x'])
+        print(f"Rescaled focal length is {self.focal}")
+        
         # ray directions for all pixels, same for all images (same H, W, focal)
         self.directions, self.pix_x, self.pix_y = get_ray_directions(self.img_wh[1], self.img_wh[0], self.focal) # (h, w, 3)
 
@@ -65,14 +64,13 @@ class BlenderDataset(Dataset):
 
     def process_rays(self, frame):
         pose = np.array(frame['transform_matrix'])[:3, :4]
-        # print(f"pose (BEFORE): {pose}")
-        # pose[:,3] = pose[:,3] / self.scale # RESCALE POSITION
-        # print(f"pose (AFTER): {pose}")
+        # rescale scene so that everything fits
+        # in a [-1,1] box   
+        pose[:,3] = pose[:,3] / self.scale
         self.poses += [pose]
         c2w = torch.FloatTensor(pose)
         rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
-        # rescale origin
-        rays_o = rays_o / self.scale # rescale scene
+        rays_o = rays_o # / self.scale 
         return rays_o, rays_d
 
 
@@ -81,20 +79,18 @@ class BlenderDataset(Dataset):
         image_path = os.path.join(self.root_dir, f"{frame['file_path']}.tif")
         self.image_paths += [image_path]
         img_transform = lambda img: -np.log(img)
-        img = NerfImage(image_path, img_transform)
-        # if self.n_chan == 3: # no alpha
-        #     # just taking red channel here!
-        #     img = img[:,1]
-        # elif self.n_chan == 1:
-        #     #TODO: walnut imgs needs to be shifted 0.22% to the left
-        #     img = img.squeeze() 
-        # assert img.shape == (h, w)
+
+        full_res = 2348.
+        scale = self.img_wh[0] / full_res 
+        img = NerfImage(image_path, img_transform, scale)
 
         # noise = Image.effect_noise(self.img_wh, self.noise_sd)
         # noise = self.transform(noise).squeeze()
         # img = (img + self.noise_level*(noise - 0.5)).clamp(0,1) # noise centred at 0.5
 
         # TODO: add bilinear interpolation into training data
+                # TODO: interpolation!
+        # scipy.interpolate.interpn(grid, values, query, method='linear', bounds_error=True)
         # jitter = torch.rand_like(self.directions[1:-1,1:-1,:]) - 0.5
         # jitter[...,2] = 0 # no in-plane jitter
         # jx = jitter[...,0]
@@ -107,6 +103,7 @@ class BlenderDataset(Dataset):
         # rays_o, rays_d = get_rays(self.directions + jitter / self.focal, c2w) # both (h*w, 3)
 
         px = []
+        # TODO: no need to load as torch then convert to numpy!
         x_vals = torch.flatten(self.pix_x).numpy()
         y_vals = torch.flatten(self.pix_y).numpy()
         for x_val, y_val in zip(x_vals, y_vals):

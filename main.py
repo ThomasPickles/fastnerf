@@ -45,12 +45,10 @@ if __name__ == '__main__':
 	c, scale, object_size, aspect_ratio = get_params(data_name)
 
 	w = int(h*aspect_ratio)
-	# near = 1. - object_size / scale
-	# far = 1. + object_size / scale
-	# near = (scale - object_size) / scale
-	near = 0
-	# far = (scale + object_size ) / scale
-	far = 2
+	# t = 1 should go right through the centre
+	near = 1. - object_size / scale
+	far = 1. + object_size / scale
+	
 
 	model = FastNerf(config["encoding"], config["network"]).to(device)
 
@@ -61,6 +59,7 @@ if __name__ == '__main__':
 
 		run_name = uuid.uuid4().hex[0:7] if config["output"]["hash_naming"] else f"todo_NAMING_CONVENTION"
 
+		print(f"Loading training data...")
 		training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), scale=scale, n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
 		if optim["pixel_importance_sampling"]:
 			pixel_weights = training_dataset.get_pixel_values()
@@ -74,6 +73,7 @@ if __name__ == '__main__':
 		model_optimizer = torch.optim.Adam(model.parameters(), lr=optim["learning_rate"])
 		scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=optim["milestones"], gamma=optim["gamma"])
 
+		print(f"Finished loading training data.  Training model on {device}...")
 		now = time.monotonic()
 		trained_model, training_loss = train(model, model_optimizer, scheduler, data_loader, nb_epochs=optim["training_epochs"], device=device, hn=near, hf=far, nb_bins=optim["samples_per_ray"], loss_function=nn.MSELoss())
 		training_time = time.monotonic() - now
