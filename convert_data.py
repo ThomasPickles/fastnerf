@@ -67,13 +67,14 @@ class BlenderDataset(Dataset):
 
     def process_rays(self, frame):
         pose = np.array(frame['transform_matrix'])[:3, :4]
-        # rescale scene so that everything fits
-        # in a [-1,1] box   
-        pose[:,3] = pose[:,3] / self.scale
         self.poses += [pose]
         c2w = torch.FloatTensor(pose)
         rays_o, rays_d = get_rays(self.directions, c2w) # both (h*w, 3)
-        rays_o = rays_o # / self.scale 
+        # rescale scene so that object fits
+        # in a [0,1] box   
+        # no longer have normalised rays
+        rays_o = 0.5 * rays_o / self.scale + 0.5 
+        rays_d = rays_d / self.scale
         return rays_o, rays_d
 
 

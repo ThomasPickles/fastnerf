@@ -17,15 +17,15 @@ def get_voxels_in_slice(z0, device, resolution):
 	voxs = torch.stack([z,y,x],dim=2).reshape(-1, 3)
 	return voxs 
 
-def get_points_in_slice(dim, device, resolution, limit):
-	# WALNUT DIMENSIONS
-	half_dx = limit/resolution[0]
-	half_dy = limit/resolution[1]
-	d1s = torch.linspace(-limit+half_dx, limit-half_dx, steps=resolution[0], device=device)
-	d2s = torch.linspace(-limit+half_dy, limit-half_dy, steps=resolution[1], device=device)
+def get_points_in_slice(dim, device, resolution):
+	half_dx = 1./resolution[0]
+	half_dy = 1./resolution[1]
+	d1s = torch.linspace(0.+half_dx, 1.-half_dx, steps=resolution[0], device=device)
+	d2s = torch.linspace(0.+half_dy, 1.-half_dy, steps=resolution[1], device=device)
 	n_pixels = resolution[0] * resolution[1]
 	d1, d2 = torch.meshgrid(d1s, d2s, indexing='xy')
 	d0 = torch.zeros_like(d1) # ([z0], device=device).expand(n_pixels).reshape(x.shape)
+	d0 = d0 + 0.5 # object centred at 0.5
 	if dim == 0: # x=0
 		points = torch.stack([d0,d1,d2], dim=2).reshape(-1, 3)
 	if dim == 1: # y=0
@@ -46,7 +46,7 @@ def get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins):
 	t = lower + (upper - lower) * u  # [batch_size, nb_bins]
 	delta = t[:, 1:] - t[:, :-1] # [batch_size, nb_bins-1]
 	x = ray_origins.unsqueeze(1) + t.unsqueeze(2) * ray_directions.unsqueeze(1)  # [batch_size, nb_bins, 3]
-	# print(f"ray near/far is {x[1,0,:]}/{x[1,-1,:]	}")
+	print(f"ray near/far is {x[1,0,:]}/{x[1,-1,:]	}")
 	return x.reshape(-1, 3), delta
 
 
