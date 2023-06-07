@@ -47,6 +47,10 @@ if __name__ == '__main__':
 
 	device = config["hardware"]["train"]
 	device_name = torch.cuda.get_device_name(device)
+	if torch.cuda.is_available():
+		print(f"Can train on {torch.cuda.get_device_name()}")
+	else:
+		print(f"No gpu acceleration available")
 
 	data_config = config["data"]
 
@@ -113,6 +117,7 @@ if __name__ == '__main__':
 
 		snapshot_path = f"checkpoints/{run_name}.pt"
 		torch.save(model.state_dict(), snapshot_path)
+		trained_model = model
 		print(f"Training complete. Model weights saved as {snapshot_path}")
 	else:
 		run_name = args.load_checkpoint
@@ -163,8 +168,9 @@ if __name__ == '__main__':
 
 			sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
 			# text = f"test_loss: {test_loss:.1f}dB, training_loss: {float(final_training_loss_db):.1f}dB, lr: {lr:.2E}, loss function: {loss}, training noise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})\nepochs: {epochs}, layers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, training time (h): {training_time/3600:.2f}\nnumber of training images: {args.n_train}, img_size: {img_size}, samples per ray: {samples}, pixel importance sampling: {args.importance_sampling}\n"
+			text = "todo..."
 
-			my.write_imgs((cpu_imgs, training_loss, sigma, sigma_gt, px_vals), f'out/{run_name}_loss_{img_index}.png', "todo", show_training_img=False)
+			my.write_imgs((cpu_imgs, training_loss_db, sigma, sigma_gt, px_vals), f'out/{run_name}_loss_{img_index}.png', text, show_training_img=False)
 
 
 	# is_voxel_grid = True if (data_name == 'jaw') else False 

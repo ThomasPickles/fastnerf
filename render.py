@@ -46,7 +46,7 @@ def get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins):
 	t = lower + (upper - lower) * u  # [batch_size, nb_bins]
 	delta = t[:, 1:] - t[:, :-1] # [batch_size, nb_bins-1]
 	x = ray_origins.unsqueeze(1) + t.unsqueeze(2) * ray_directions.unsqueeze(1)  # [batch_size, nb_bins, 3]
-	print(f"ray near/far is {x[1,0,:]}/{x[1,-1,:]	}")
+	# print(f"ray near/far is {x[1,0,:]}/{x[1,-1,:]	}")
 	return x.reshape(-1, 3), delta
 
 
