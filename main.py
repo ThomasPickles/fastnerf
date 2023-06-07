@@ -18,14 +18,14 @@ import helpers as my
 
 import commentjson as json
 
-def write_slices(model, device, ep, output):
+def write_slices(model, device, ep, output, prefix):
 		MAX_BRIGHTNESS = 10.
 		if output["slices"]:
 			resolution = (output["slice_resolution"], output["slice_resolution"])
 			for axis, name in enumerate(['x','y','z']):
 				img = render_slice(model=model, dim=axis, device=device, resolution=resolution, voxel_grid=False, samples_per_point = output["rays_per_pixel"])
 				img = img.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-				my.write_img(img, f'slices/{ep:04}_slice_{name}.png', verbose=True)
+				my.write_img(img, f'{prefix}_{name}_{ep:04}.png', verbose=True)
 			# no video because just slices
 			# sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{run_name}_%03d.png out/{run_name}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 			# os.system(sys_command)
@@ -90,11 +90,13 @@ if __name__ == '__main__':
 		print(f"Finished loading training data.  Training model on {device}...")
 		now = time.monotonic()
 
+		# TODO: implement speedups in here:
+		# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
 		training_loss_db = []
 		loss_function=nn.MSELoss()
 		with tqdm(range(optim["training_epochs"]), desc="Epochs") as t:
 			for ep in t:
-				for _, batch in enumerate(data_loader):
+				for batch_num, batch in enumerate(data_loader):
 					ray_origins = batch[:, :3].to(device)
 					ray_directions = batch[:, 3:6].to(device)
 					ground_truth_px_values = batch[:, 6].to(device)
@@ -109,7 +111,7 @@ if __name__ == '__main__':
 				scheduler.step()
 				torch.save(model.cpu(), 'nerf_model') # save after each epoch
 				model.to(device)
-				write_slices(model, device, ep, config["output"]) # output slices during training
+				write_slices(model, device, ep, config["output"], f'tmp/{run_name}') # output slices during training
 				t.set_postfix(loss=f"{training_loss_db[-1]:.1f} dB per pixel")
 
 		training_time = time.monotonic() - now
@@ -171,6 +173,16 @@ if __name__ == '__main__':
 			text = "todo..."
 
 			my.write_imgs((cpu_imgs, training_loss_db, sigma, sigma_gt, px_vals), f'out/{run_name}_loss_{img_index}.png', text, show_training_img=False)
+
+
+	if output["slices"]:
+		# stich together slices into a video
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_x_%04d.png out/{run_name}_slices_x.mp4"
+		os.system(sys_command)
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_y_%04d.png out/{run_name}_slices_y.mp4"
+		os.system(sys_command)
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_z_%04d.png out/{run_name}_slices_z.mp4"
+		os.system(sys_command)
 
 
 	# is_voxel_grid = True if (data_name == 'jaw') else False 
