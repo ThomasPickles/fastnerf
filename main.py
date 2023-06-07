@@ -11,14 +11,25 @@ import random
 from convert_data import BlenderDataset
 from nerf import FastNerf
 from datasets import get_params
-from helpers import linear_to_db
 from test import *
-from train import train
-from render import get_points_along_rays
+from render import get_points_along_rays, render_rays
 import helpers as my
 # from phantom import get_sigma_gt
 
 import commentjson as json
+
+def write_slices(model, device, ep, output):
+		MAX_BRIGHTNESS = 10.
+		if output["slices"]:
+			resolution = (output["slice_resolution"], output["slice_resolution"])
+			for axis, name in enumerate(['x','y','z']):
+				img = render_slice(model=model, dim=axis, device=device, resolution=resolution, voxel_grid=False, samples_per_point = output["rays_per_pixel"])
+				img = img.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
+				my.write_img(img, f'out/{ep:03}_slice_{name}.png', verbose=True)
+			# no video because just slices
+			# sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{run_name}_%03d.png out/{run_name}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
+			# os.system(sys_command)
+
 
 def parse_args():
 	parser = argparse.ArgumentParser(description="Train model")
@@ -74,7 +85,29 @@ if __name__ == '__main__':
 
 		print(f"Finished loading training data.  Training model on {device}...")
 		now = time.monotonic()
-		trained_model, training_loss = train(model, model_optimizer, scheduler, data_loader, nb_epochs=optim["training_epochs"], device=device, hn=near, hf=far, nb_bins=optim["samples_per_ray"], loss_function=nn.MSELoss())
+
+		training_loss_db = []
+		loss_function=nn.MSELoss()
+		with tqdm(range(optim["training_epochs"]), desc="Epochs") as t:
+			for ep in t:
+				for _, batch in enumerate(data_loader):
+					ray_origins = batch[:, :3].to(device)
+					ray_directions = batch[:, 3:6].to(device)
+					ground_truth_px_values = batch[:, 6].to(device)
+
+					regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=near, hf=far, nb_bins=optim["samples_per_ray"])
+					
+					loss = loss_function(regenerated_px_values, ground_truth_px_values)
+					model_optimizer.zero_grad()
+					loss.backward()
+					model_optimizer.step()
+					training_loss_db.append(linear_to_db(loss.item()))
+				scheduler.step()
+				torch.save(model.cpu(), 'nerf_model') # save after each epoch
+				model.to(device)
+				write_slices(model, device, ep, config["output"]) # output slices during training
+				t.set_postfix(loss=f"{training_loss_db[-1]:.1f} dB per pixel")
+
 		training_time = time.monotonic() - now
 		timestamp = time.strftime("%Y_%m_%d_%H:%M:%S")
 
@@ -88,8 +121,6 @@ if __name__ == '__main__':
 		trained_model = model
 		trained_model.load_state_dict(torch.load(snapshot_path))
 		trained_model.eval()
-
-	# TODO: RENDER SLICES DURING TRAINING, SO WE SEE CONVERGENCEZ
 
 	has_gt = False
 	if has_gt:
@@ -136,25 +167,7 @@ if __name__ == '__main__':
 			my.write_imgs((cpu_imgs, training_loss, sigma, sigma_gt, px_vals), f'out/{run_name}_loss_{img_index}.png', "todo", show_training_img=False)
 
 
-	is_voxel_grid = True if (data_name == 'jaw') else False 
-	MAX_BRIGHTNESS = 2.5 if (data_name == 'jaw') else 10
+	# is_voxel_grid = True if (data_name == 'jaw') else False 
+	# MAX_BRIGHTNESS = 2.5 if (data_name == 'jaw') else 10
 
-	# walnut data still needs to be shifted infinitesimally to left
-
-	if output["slices"]:
-		# for idx in range(100):
-		# for idx in range(50,51):
-		# 	z = int(3.3*idx) if is_voxel_grid else idx - 50
-		resolution = (output["slice_resolution"], output["slice_resolution"])
-		slice_x = render_slice(model=trained_model, dim=0, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
-		slice_x = slice_x.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-		my.write_img(slice_x, f'out/{run_name}_slice_x.png', verbose=True)
-		slice_y = render_slice(model=trained_model, dim=1, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
-		slice_y = slice_y.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-		my.write_img(slice_y, f'out/{run_name}_slice_y.png', verbose=True)
-		slice_z = render_slice(model=trained_model, dim=2, device=test_device, resolution=resolution, voxel_grid=is_voxel_grid, samples_per_point = output["rays_per_pixel"])
-		slice_z = slice_z.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-		my.write_img(slice_z, f'out/{run_name}_slice_z.png', verbose=True)
-		# no video because just slices
-		# sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{run_name}_%03d.png out/{run_name}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
-		# os.system(sys_command)
+	
