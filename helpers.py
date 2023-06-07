@@ -71,7 +71,8 @@ def write_imgs(data, path, title=None, show_training_img=False):
 
 def write_img(img, path, verbose=True):
 	fig, ax = plt.subplots(figsize=(20, 20))
-	im = ax.imshow(img, cmap='gray', origin='lower') # to show images the correct way up!
+	ax.imshow(img, cmap='gray', origin='lower') # to show images the correct way up!
+	ax.invert_xaxis()
 	plt.axis('off')
 	plt.savefig(path, bbox_inches='tight')
 	if verbose:

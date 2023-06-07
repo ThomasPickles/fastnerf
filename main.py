@@ -48,7 +48,7 @@ if __name__ == '__main__':
 	device = config["hardware"]["train"]
 	device_name = torch.cuda.get_device_name(device)
 	if torch.cuda.is_available():
-		print(f"Can train on {torch.cuda.get_device_name()}")
+		print(f"GPU {torch.cuda.get_device_name()} available")
 	else:
 		print(f"No gpu acceleration available")
 
@@ -72,6 +72,7 @@ if __name__ == '__main__':
 		random.seed(seed)
 
 		run_name = uuid.uuid4().hex[0:7] if config["output"]["hash_naming"] else f"todo_NAMING_CONVENTION"
+		print(f"Output will be written to {run_name}.")
 
 		print(f"Loading training data...")
 		training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), scale=object_size, n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
@@ -177,11 +178,11 @@ if __name__ == '__main__':
 
 	if output["slices"]:
 		# stich together slices into a video
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_x_%04d.png out/{run_name}_slices_x.mp4"
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_x_%04d.png -vf \"hflip\" out/{run_name}_slices_x.mp4"
 		os.system(sys_command)
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_y_%04d.png out/{run_name}_slices_y.mp4"
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_y_%04d.png -vf \"hflip\" out/{run_name}_slices_y.mp4"
 		os.system(sys_command)
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_z_%04d.png out/{run_name}_slices_z.mp4"
+		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_z_%04d.png -vf \"hflip\" out/{run_name}_slices_z.mp4"
 		os.system(sys_command)
 
 

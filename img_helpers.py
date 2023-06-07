@@ -13,13 +13,17 @@ class NerfImage():
         # walnut images need to be shifted left by 5 pixels.  correct it here
         numpy_image = np.roll(numpy_image, -5, axis=1)
         img = img_transform(numpy_image)
-        background = 0.25*(img[0,0]+img[h-1,0]+img[h-1,w-1]+img[0,w-1])
-        img -= background
-        # clamp background values to zero
-        dark_correction = -0.05
-        img = exposure.rescale_intensity(img, in_range=(dark_correction, 1.8), out_range=(0.,1.))
-        # rescale
         img = transform.resize(img, im_wh, anti_aliasing=True)
+
+        # subtract off background values
+        background = 0.25*(img[0,0]+img[im_wh[0]-1,0]+img[im_wh[0]-1,im_wh[1]-1]+img[0,im_wh[1]-1])
+        img -= background
+        # CLAMP BACKGROUND VALUES TO ZERO
+        # nerf is overfitting to noise, so clamp
+        # any shot noise to zero by zeroing small values
+        dark_floor = 0.05 # determine empirically
+        img = exposure.rescale_intensity(img, in_range=(dark_floor, 1.8), out_range=(0.,1.))
+        # rescale
         self.image = img
         self.h, self.w = self.image.shape
         assert self.h > self.w, 'data might be wrong way round!'
