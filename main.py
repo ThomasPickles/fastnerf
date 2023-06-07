@@ -25,7 +25,7 @@ def write_slices(model, device, ep, output):
 			for axis, name in enumerate(['x','y','z']):
 				img = render_slice(model=model, dim=axis, device=device, resolution=resolution, voxel_grid=False, samples_per_point = output["rays_per_pixel"])
 				img = img.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-				my.write_img(img, f'out/{ep:03}_slice_{name}.png', verbose=True)
+				my.write_img(img, f'slices/{ep:04}_slice_{name}.png', verbose=True)
 			# no video because just slices
 			# sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{run_name}_%03d.png out/{run_name}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
 			# os.system(sys_command)
