@@ -6,7 +6,6 @@ import os
 from PIL import Image
 from torchvision import transforms as T
 from torchvision import io
-import imageio # can read 16-bit tif files, but PIL can't yet
 import random
 
 from ray_utils import *
