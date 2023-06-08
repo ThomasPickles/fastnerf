@@ -12,6 +12,7 @@ jaw/images-video/
 tmp/
 # images
 *.png
+*.tif
 *.jpg
 # profile outputs
 *.lprof 
