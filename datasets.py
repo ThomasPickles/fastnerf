@@ -13,5 +13,5 @@ def get_params(d):
         # angle of view
         # camera is on a circle 163 from origin at (x,y,0)
         radius = 163
-        object_size = 60 # safer to overestimate
+        object_size = 48 # safer to overestimate
         return 3, radius, object_size, aspect_ratio

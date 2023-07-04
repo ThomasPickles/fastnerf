@@ -1,6 +1,5 @@
 # from scipy.interpolate import interpn
 from skimage import io
-from skimage import exposure, transform # supports 16-bit tiff
 
 import numpy as np
 
@@ -8,21 +7,13 @@ class NerfImage():
     def __init__(self, path, img_transform, im_wh):
         numpy_image = io.imread(path)
         dtype = numpy_image.dtype
+        assert (dtype == 'uint8') or (dtype == 'uint16'), 'unknown datatype'
+        if numpy_image.ndim == 3:
+            numpy_image = numpy_image[:,:,1] # only keep the first colour channel if RGB
         h, w = numpy_image.shape 
         assert h > w, 'data might be wrong way round!'
-        # walnut images need to be shifted left by 5 pixels.  correct it here
-        numpy_image = np.roll(numpy_image, -5, axis=1)
-        img = img_transform(numpy_image)
-        img = transform.resize(img, im_wh, anti_aliasing=True)
+        img = img_transform(numpy_image, im_wh)
 
-        # subtract off background values
-        background = 0.25*(img[0,0]+img[im_wh[0]-1,0]+img[im_wh[0]-1,im_wh[1]-1]+img[0,im_wh[1]-1])
-        img -= background
-        # CLAMP BACKGROUND VALUES TO ZERO
-        # nerf is overfitting to noise, so clamp
-        # any shot noise to zero by zeroing small values
-        dark_floor = 0.05 # determine empirically
-        img = exposure.rescale_intensity(img, in_range=(dark_floor, 1.8), out_range=(0.,1.))
         # rescale
         self.image = img
         self.h, self.w = self.image.shape

@@ -19,7 +19,7 @@ def moving_average(vals, window=10) :
 	return av
 
 def forward(x):
-	return x**(1/2)
+	return np.maximum(0,x)**(1/2)
 
 def inverse(x):
 	return x**2

@@ -9,7 +9,7 @@ import matplotlib.gridspec as gridspec
 from cycler import cycler # to get colours to match in different plots
 
 # phantom is z,y,x
-phantom = np.load('../jaw/jaw_phantom.npy')
+phantom = np.load('jaw/jaw_phantom.npy')
 h,w,_ = phantom.shape
 
 assert phantom.shape == (h,w,w)

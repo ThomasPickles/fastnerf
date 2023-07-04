@@ -15,7 +15,7 @@
   "aabb_scale": 1,
   "frames": [
     {
-    "file_path": "20201111_walnut_0083",
+    "file_path": "20201111_walnut_0083.tif",
     "transform_matrix": [
         [
         -0.754709580222772,
@@ -44,7 +44,7 @@
     ]
     },
     {
-      "file_path": "20201111_walnut_0383",
+      "file_path": "20201111_walnut_0383.tif",
       "transform_matrix": [
         [
           0.981627183447664,
@@ -73,7 +73,7 @@
       ]
     },
     {
-      "file_path": "20201111_walnut_0474",
+      "file_path": "20201111_walnut_0474.tif",
       "transform_matrix": [
         [
           0.5519369853120584,

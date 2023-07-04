@@ -18,6 +18,7 @@ def get_voxels_in_slice(z0, device, resolution):
 	return voxs 
 
 def get_points_in_slice(dim, device, resolution):
+	plane = 1 - 92./331.
 	half_dx = 1./resolution[0]
 	half_dy = 1./resolution[1]
 	d1s = torch.linspace(0.+half_dx, 1.-half_dx, steps=resolution[0], device=device)
@@ -25,7 +26,7 @@ def get_points_in_slice(dim, device, resolution):
 	n_pixels = resolution[0] * resolution[1]
 	d1, d2 = torch.meshgrid(d1s, d2s, indexing='xy')
 	d0 = torch.zeros_like(d1) # ([z0], device=device).expand(n_pixels).reshape(x.shape)
-	d0 = d0 + 0.5 # object centred at 0.5
+	d0 = d0 + plane # object centred at 0.5
 	if dim == 0: # x=0
 		points = torch.stack([d0,d1,d2], dim=2).reshape(-1, 3)
 	if dim == 1: # y=0

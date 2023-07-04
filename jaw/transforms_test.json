@@ -15,7 +15,7 @@
   "aabb_scale": 1,
   "frames": [
     {
-      "file_path": "images-black/proj_jaw669",
+      "file_path": "images-black/proj_jaw669.png",
       "sharpness": 5.804383411150782,
       "transform_matrix": [
         [
@@ -45,7 +45,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw432",
+      "file_path": "images-black/proj_jaw432.png",
       "sharpness": 6.659730843174952,
       "transform_matrix": [
         [
@@ -75,7 +75,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw009",
+      "file_path": "images-black/proj_jaw009.png",
       "sharpness": 5.133095303488052,
       "transform_matrix": [
         [
@@ -105,7 +105,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw694",
+      "file_path": "images-black/proj_jaw694.png",
       "sharpness": 6.334940950288383,
       "transform_matrix": [
         [
@@ -135,7 +135,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw072",
+      "file_path": "images-black/proj_jaw072.png",
       "sharpness": 6.3344795385883,
       "transform_matrix": [
         [
@@ -165,7 +165,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw517",
+      "file_path": "images-black/proj_jaw517.png",
       "sharpness": 6.847591321065641,
       "transform_matrix": [
         [
@@ -195,7 +195,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw268",
+      "file_path": "images-black/proj_jaw268.png",
       "sharpness": 7.589629222741006,
       "transform_matrix": [
         [
@@ -225,7 +225,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw238",
+      "file_path": "images-black/proj_jaw238.png",
       "sharpness": 7.491875858280692,
       "transform_matrix": [
         [
@@ -255,7 +255,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw080",
+      "file_path": "images-black/proj_jaw080.png",
       "sharpness": 5.880758033507278,
       "transform_matrix": [
         [
@@ -285,7 +285,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw424",
+      "file_path": "images-black/proj_jaw424.png",
       "sharpness": 6.764647074979401,
       "transform_matrix": [
         [
@@ -315,7 +315,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw506",
+      "file_path": "images-black/proj_jaw506.png",
       "sharpness": 7.715023345234826,
       "transform_matrix": [
         [
@@ -345,7 +345,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw483",
+      "file_path": "images-black/proj_jaw483.png",
       "sharpness": 7.989123867069487,
       "transform_matrix": [
         [
@@ -375,7 +375,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw291",
+      "file_path": "images-black/proj_jaw291.png",
       "sharpness": 6.637780829442461,
       "transform_matrix": [
         [
@@ -405,7 +405,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw730",
+      "file_path": "images-black/proj_jaw730.png",
       "sharpness": 5.949244712990937,
       "transform_matrix": [
         [
@@ -435,7 +435,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw077",
+      "file_path": "images-black/proj_jaw077.png",
       "sharpness": 5.878516890964021,
       "transform_matrix": [
         [
@@ -465,7 +465,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw188",
+      "file_path": "images-black/proj_jaw188.png",
       "sharpness": 5.6596539412249385,
       "transform_matrix": [
         [
@@ -495,7 +495,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw702",
+      "file_path": "images-black/proj_jaw702.png",
       "sharpness": 6.240944795385883,
       "transform_matrix": [
         [
@@ -525,7 +525,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw406",
+      "file_path": "images-black/proj_jaw406.png",
       "sharpness": 6.978412524031859,
       "transform_matrix": [
         [
@@ -555,7 +555,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw109",
+      "file_path": "images-black/proj_jaw109.png",
       "sharpness": 5.88662455369404,
       "transform_matrix": [
         [
@@ -585,7 +585,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw319",
+      "file_path": "images-black/proj_jaw319.png",
       "sharpness": 6.270233452348256,
       "transform_matrix": [
         [
@@ -615,7 +615,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw121",
+      "file_path": "images-black/proj_jaw121.png",
       "sharpness": 5.9370722329030485,
       "transform_matrix": [
         [
@@ -645,7 +645,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw513",
+      "file_path": "images-black/proj_jaw513.png",
       "sharpness": 7.22416918429003,
       "transform_matrix": [
         [
@@ -675,7 +675,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw085",
+      "file_path": "images-black/proj_jaw085.png",
       "sharpness": 6.088569074430102,
       "transform_matrix": [
         [
@@ -705,7 +705,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw726",
+      "file_path": "images-black/proj_jaw726.png",
       "sharpness": 5.787640758033508,
       "transform_matrix": [
         [
@@ -735,7 +735,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw194",
+      "file_path": "images-black/proj_jaw194.png",
       "sharpness": 5.315045317220544,
       "transform_matrix": [
         [
@@ -765,7 +765,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw627",
+      "file_path": "images-black/proj_jaw627.png",
       "sharpness": 6.191156275748421,
       "transform_matrix": [
         [
@@ -795,7 +795,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw528",
+      "file_path": "images-black/proj_jaw528.png",
       "sharpness": 5.5776764625103,
       "transform_matrix": [
         [
@@ -825,7 +825,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw735",
+      "file_path": "images-black/proj_jaw735.png",
       "sharpness": 5.525602856358144,
       "transform_matrix": [
         [
@@ -855,7 +855,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw301",
+      "file_path": "images-black/proj_jaw301.png",
       "sharpness": 7.001614940950288,
       "transform_matrix": [
         [
@@ -885,7 +885,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw521",
+      "file_path": "images-black/proj_jaw521.png",
       "sharpness": 6.326042296072507,
       "transform_matrix": [
         [
@@ -915,7 +915,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw359",
+      "file_path": "images-black/proj_jaw359.png",
       "sharpness": 7.040834935457292,
       "transform_matrix": [
         [
@@ -945,7 +945,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw178",
+      "file_path": "images-black/proj_jaw178.png",
       "sharpness": 6.112474594891514,
       "transform_matrix": [
         [
@@ -975,7 +975,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw384",
+      "file_path": "images-black/proj_jaw384.png",
       "sharpness": 8.105948915133204,
       "transform_matrix": [
         [
@@ -1005,7 +1005,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw744",
+      "file_path": "images-black/proj_jaw744.png",
       "sharpness": 5.936215325460038,
       "transform_matrix": [
         [
@@ -1035,7 +1035,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw501",
+      "file_path": "images-black/proj_jaw501.png",
       "sharpness": 7.50281790716836,
       "transform_matrix": [
         [
@@ -1065,7 +1065,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw668",
+      "file_path": "images-black/proj_jaw668.png",
       "sharpness": 6.037835759406756,
       "transform_matrix": [
         [
@@ -1095,7 +1095,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw298",
+      "file_path": "images-black/proj_jaw298.png",
       "sharpness": 7.0454929964295525,
       "transform_matrix": [
         [
@@ -1125,7 +1125,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw214",
+      "file_path": "images-black/proj_jaw214.png",
       "sharpness": 5.495567151881351,
       "transform_matrix": [
         [
@@ -1155,7 +1155,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw641",
+      "file_path": "images-black/proj_jaw641.png",
       "sharpness": 5.885174402636638,
       "transform_matrix": [
         [
@@ -1185,7 +1185,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw722",
+      "file_path": "images-black/proj_jaw722.png",
       "sharpness": 6.260873386432299,
       "transform_matrix": [
         [
@@ -1215,7 +1215,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw580",
+      "file_path": "images-black/proj_jaw580.png",
       "sharpness": 7.005042570722329,
       "transform_matrix": [
         [
@@ -1245,7 +1245,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw149",
+      "file_path": "images-black/proj_jaw149.png",
       "sharpness": 6.181928041746773,
       "transform_matrix": [
         [
@@ -1275,7 +1275,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw423",
+      "file_path": "images-black/proj_jaw423.png",
       "sharpness": 7.011722054380665,
       "transform_matrix": [
         [
@@ -1305,7 +1305,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw015",
+      "file_path": "images-black/proj_jaw015.png",
       "sharpness": 5.352485580884372,
       "transform_matrix": [
         [
@@ -1335,7 +1335,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw114",
+      "file_path": "images-black/proj_jaw114.png",
       "sharpness": 5.613974182916781,
       "transform_matrix": [
         [
@@ -1365,7 +1365,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw564",
+      "file_path": "images-black/proj_jaw564.png",
       "sharpness": 6.063411150782752,
       "transform_matrix": [
         [
@@ -1395,7 +1395,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw651",
+      "file_path": "images-black/proj_jaw651.png",
       "sharpness": 6.112979950563032,
       "transform_matrix": [
         [
@@ -1425,7 +1425,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw515",
+      "file_path": "images-black/proj_jaw515.png",
       "sharpness": 6.831463883548476,
       "transform_matrix": [
         [
@@ -1455,7 +1455,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw540",
+      "file_path": "images-black/proj_jaw540.png",
       "sharpness": 5.994638835484757,
       "transform_matrix": [
         [
@@ -1485,7 +1485,7 @@
       ]
     },
     {
-      "file_path": "images-black/proj_jaw312",
+      "file_path": "images-black/proj_jaw312.png",
       "sharpness": 6.409008514144466,
       "transform_matrix": [
         [

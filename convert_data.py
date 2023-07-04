@@ -11,6 +11,7 @@ import random
 from ray_utils import *
 from img_helpers import NerfImage
 from helpers import write_img
+import img_transforms 
 
 class BlenderDataset(Dataset):
     def __init__(self, root_dir, filename, split, img_wh, scale, n_chan, noise_level=0, noise_sd=0, n_train=0):
@@ -78,12 +79,15 @@ class BlenderDataset(Dataset):
 
 
     def process_image(self, frame):
-        # TODO: tif or png!
-        image_path = os.path.join(self.root_dir, f"{frame['file_path']}.tif")
+        image_path = os.path.join(self.root_dir, f"{frame['file_path']}")
         self.image_paths += [image_path]
-        img_transform = lambda img: -np.log(img)
 
-        img = NerfImage(image_path, img_transform, (self.img_wh[1],self.img_wh[0]))
+        if self.root_dir == 'walnut':
+            transform = img_transforms.walnut
+        if self.root_dir     == 'jaw':
+            transform = img_transforms.jaw
+        
+        img = NerfImage(image_path, transform, (self.img_wh[1], self.img_wh[0]))
 
         # noise = Image.effect_noise(self.img_wh, self.noise_sd)
         # noise = self.transform(noise).squeeze()
