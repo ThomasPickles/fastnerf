@@ -5,7 +5,7 @@
         "neurons_per_layer": 384
     },
     "encoding": {
-        "otype": "Frequency",
+        "otype": "None",
         "n_frequencies": 10
     },
     "optim": {
@@ -16,7 +16,7 @@
         "batchsize": 1024,
         "samples_per_ray": 192,
         "learning_rate": 0.001,
-        "pixel_importance_sampling": false,
+        "pixel_importance_sampling": true,
         "random_seed": false,
         "interpolate_training_images": true
     },
@@ -25,7 +25,7 @@
         "transforms_file": "transforms",
         "ground_truth": "",
         "img_size": 200,
-        "n_images": 200, 
+        "n_images": 80, 
         "noise_mean": 0,
         "noise_sd": 0,
     },

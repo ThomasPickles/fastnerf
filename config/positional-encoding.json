@@ -1,4 +1,5 @@
-// run time?
+// training time of 30 sec on slurm
+// 2 epochs * 30 img * 30**2 
 {
     "network": {
         "n_layers": 8,
@@ -6,12 +7,13 @@
     },
     "encoding": {
         "otype": "Frequency",
-        "n_frequencies": 10
+        "n_frequencies": 8
     },
     "optim": {
         "training_epochs": 20,
         "loss": "L2",
-        "milestones": [2, 4, 8, 12],
+        // TODO: fiddle with milestones to improve speed of convergence?
+        "milestones": [],
         "gamma": 0.5,
         "batchsize": 1024,
         "samples_per_ray": 192,
@@ -24,7 +26,7 @@
         "dataset": "walnut",
         "transforms_file": "transforms",
         "ground_truth": "",
-        "img_size": 200,
+        "img_size": 40,
         "n_images": 10, 
         "noise_mean": 0,
         "noise_sd": 0,
@@ -33,8 +35,8 @@
         "images": true,
         "slices": true,
         "samples_per_ray": 192,
-        "slice_resolution": 800,
-        "rays_per_pixel": 64,
+        "slice_resolution": 200,
+        "rays_per_pixel": 4,
         "hash_naming": true
     },
     "hardware": {

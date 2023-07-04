@@ -1,0 +1,69 @@
+// training time of 30 sec on slurm
+// 2 epochs * 30 img * 30**2 
+{
+    "network": {
+        "otype": "FullyFusedMLP",    // Component type.
+        "activation": "ReLU",        // Activation of hidden layers.
+        "output_activation": "None", // Activation of the output layer.
+        "n_neurons": 128,            // Neurons in each hidden layer.
+                                    // May only be 16, 32, 64, or 128.
+        "n_hidden_layers": 12,        // Number of hidden layers.
+    },
+    "encoding": {
+        "otype": "Grid",           // Component type.
+        "type": "Hash",            // Type of backing storage of the
+                                // grids. Can be "Hash", "Tiled"
+                                // or "Dense".
+        "n_levels": 16,            // Number of levels (resolutions)
+        "n_features_per_level": 2, // Dimensionality of feature vector
+                                // stored in each level's entries.
+        "log2_hashmap_size": 21,   // If type is "Hash", is the base-2
+                                // logarithm of the number of elements
+                                // in each backing hash table.
+        "base_resolution": 16,     // The resolution of the coarsest le-
+                                // vel is base_resolution^input_dims.
+        "per_level_scale": 1.5,    // The geometric growth factor, i.e.
+                                // the factor by which the resolution
+                                // of each grid is larger (per axis)
+                                // than that of the preceding level.
+        "interpolation": "Smoothstep"  // How to interpolate nearby grid
+                                // lookups. Can be "Nearest", "Linear",
+                                // or "Smoothstep" (for smooth deri-
+                                // vatives).
+    },
+    "optim": {
+        "training_epochs": 10,
+        "loss": "L2",
+        // TODO: fiddle with milestones to improve speed of convergence?
+        "milestones": [2,4,6,8],
+        "gamma": 0.75,
+        "batchsize": 1024, // 2**10
+        "samples_per_ray": 128, // 2**7
+        "learning_rate": 0.001,
+        "pixel_importance_sampling": false,
+        "random_seed": false,
+        "interpolate_training_images": true
+    },
+    "data": {
+        "dataset": "walnut",
+        "transforms_file": "transforms",
+        "ground_truth": "",
+        "img_size": 300,
+        "n_images": 100, 
+        "noise_mean": 0,
+        "noise_sd": 0,
+    },
+    "output": {
+        "images": true,
+        "slices": true,
+        "samples_per_ray": 128,
+        "slice_resolution": 600,
+        "rays_per_pixel": 4,
+        "path": "as_config",
+        "interval": 100 // first interval / 10
+    },
+    "hardware": {
+        "train": "cuda",
+        "test": "cuda"
+    }
+}
