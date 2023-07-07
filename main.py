@@ -10,6 +10,7 @@ import random
 import csv
 try:
 	import tinycudann as tcnn
+	print("Using tiny-cuda-neural-net")
 except ImportError:
 	print("This sample requires the tiny-cuda-nn extension for PyTorch.")
 	print("You can install it by running:")
@@ -23,6 +24,7 @@ from convert_data import BlenderDataset
 from nerf import FastNerf
 from datasets import get_params
 from test import *
+from phantom import get_sigma_gt
 from render import get_points_along_rays, render_rays
 import helpers as my
 # from phantom import get_sigma_gt
@@ -160,7 +162,7 @@ if __name__ == '__main__':
 		trained_model.load_state_dict(torch.load(snapshot_path))
 		trained_model.eval()
 
-	has_gt = False
+	has_gt = True if config["data"]["dataset"] == "jaw" else False
 	if has_gt:
 		phantom = np.load("jaw/jaw_phantom.npy")
 

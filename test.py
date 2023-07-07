@@ -1,13 +1,11 @@
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
-import matplotlib.pyplot as plt
 
 from render import render_rays, get_points_along_rays, get_points_in_slice, get_voxels_in_slice
 from datasets import get_params
 from helpers import *
 from sampling import get_samples_around_point
-from phantom import get_sigma_gt, local_to_world
 
 class IndexedDataset(Dataset):
 	def __init__(self, data):
@@ -40,14 +38,12 @@ def get_ray_sigma(model, points, device):
 
 @torch.no_grad()
 def render_slice(model, dim, device, resolution, voxel_grid, samples_per_point):
-	# if voxel_grid:
-	# 	vox = get_voxels_in_slice(z, device, resolution)
-	# 	points = local_to_world(vox)
-	# else:
 	points = get_points_in_slice(dim, device, resolution)
 	nb_points = points.shape[0]
 	delta = 1. / resolution[0]
-	points = points.to('cpu') # this might be too big for gpu memory once we add in the samples, so we'll batch them up and then put the batches on the gpu one at a time
+
+	# In general we have too many points to put directly on gpu (res**2 * samples_per_point), so put them on cpu then calculate on gpu in batches
+	points = points.to('cpu') 
 	samples = get_samples_around_point(points, delta, samples_per_point) # [nb_samples, nb_points, 3]
 	sigma = torch.empty((0,1), device='cpu')
 	samples = samples.reshape(nb_points*samples_per_point,3)
@@ -62,7 +58,6 @@ def render_slice(model, dim, device, resolution, voxel_grid, samples_per_point):
 		# TODO: don't need to keep all samples, can do the
 		# averaging here
 		del batch
-	
 
 	sigma = sigma.reshape(samples_per_point, -1) # [nb_points, samples_per_point]
 	sigma = torch.mean(sigma, dim=0)
@@ -99,7 +94,7 @@ def test_model(model, dataset, img_index, **render_params):
 
 	gt = frame[...,6].squeeze(0)
 	diff = (gt - img_tensor).abs()
-	loss = (diff ** 2).mean() # probably not the best measure, we want peak
+	loss = (diff ** 2).mean() 
 	test_loss = linear_to_db(loss)
 	return test_loss, [img_tensor,gt,diff]
 	

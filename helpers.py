@@ -59,7 +59,7 @@ def write_imgs(data, path, title=None, show_training_img=False):
 	ax.set_prop_cycle(custom_cycler)
 	ax.set_yscale('function', functions=(forward, inverse))
 	ax.plot(rays.transpose(), '-')
-	if rays_gt:
+	if rays_gt.any():
 		ADJUSTED_BRIGHTNESS = 1
 		ax.plot(ADJUSTED_BRIGHTNESS*rays_gt.transpose(), '--')
 	ax.set_title("density along rays")
