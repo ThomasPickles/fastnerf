@@ -11,37 +11,31 @@ import csv
 try:
 	import tinycudann as tcnn
 	print("Using tiny-cuda-neural-net")
+	TINY_CUDA = True
 except ImportError:
-	print("This sample requires the tiny-cuda-nn extension for PyTorch.")
-	print("You can install it by running:")
+	print("tiny-cuda-nn not found.  Performance will be significantly degraded.")
+	print("You can install tiny-cuda-nn from https://github.com/NVlabs/tiny-cuda-nn")
 	print("============================================================")
-	print("tiny-cuda-nn$ cd bindings/torch")
-	print("tiny-cuda-nn/bindings/torch$ python setup.py install")
-	print("============================================================")
-	sys.exit()
+	TINY_CUDA = False
 	
-from convert_data import BlenderDataset
+from data_loader import ImagesDataset
 from nerf import FastNerf
 from datasets import get_params
 from test import *
 from phantom import get_sigma_gt
-from render import get_points_along_rays, render_rays
-import helpers as my
-# from phantom import get_sigma_gt
+from render import get_points_along_rays, get_pixel_values
+import chart_writer as writer
 
 import commentjson as json
 
-def write_slices(model, device, epoch, sub_epoch, output, prefix):
+def write_slices(model, device, epoch, sub_epoch, output, out_dir):
 		MAX_BRIGHTNESS = 10.
 		if output["slices"]:
 			resolution = (output["slice_resolution"], output["slice_resolution"])
 			for axis, name in enumerate(['x','y','z']):
 				img = render_slice(model=model, dim=axis, device=device, resolution=resolution, voxel_grid=False, samples_per_point = output["rays_per_pixel"])
 				img = img.data.cpu().numpy().reshape(resolution[0], resolution[1])/MAX_BRIGHTNESS
-				my.write_img(img, f'{prefix}_{name}_{epoch:04}_{sub_epoch:04}.png', verbose=True)
-			# no video because just slices
-			# sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/slice_{run_name}_%03d.png out/{run_name}_slices_{epochs}_{img_size}_{layers}_{neurons}.mp4"
-			# os.system(sys_command)
+				writer.write_img(img, f'{out_dir}/slice_{name}_{epoch:04}_{sub_epoch:04}.png', verbose=True)
 
 
 def parse_args():
@@ -58,21 +52,19 @@ if __name__ == '__main__':
 	with open(args.config) as f:
 		config = json.load(f)
 
-	if config["output"]["path"] == "as_config":
-		out_dir = os.path.splitext(args.config)[0]
-		try:
-			os.mkdir(out_dir)
-		except FileExistsError:
-			print(f"Overwriting previous results...")
-	else:
-		out_dir = 'tmp'
-
 	device = config["hardware"]["train"]
 	device_name = torch.cuda.get_device_name(device)
 	if torch.cuda.is_available():
-		print(f"GPU {torch.cuda.get_device_name()} available")
+		print(f"Found {torch.cuda.get_device_name()}.  Will use hardware accelerated training.")
 	else:
 		print(f"No gpu acceleration available")
+
+	network = config["network"]
+
+	if TINY_CUDA:
+		model = tcnn.NetworkWithInputEncoding(n_input_dims=3, n_output_dims=1, encoding_config=config["encoding"], network_config=network).to(device)
+	else: 
+		model = FastNerf(config["encoding"], config["network"]).to(device)
 
 	data_config = config["data"]
 
@@ -84,11 +76,16 @@ if __name__ == '__main__':
 	w = int(h*aspect_ratio)
 	near = 0.5*radius - object_size / 2
 	far =   0.5*radius + object_size / 2
-	
-	network = config["network"]
 
-	model = tcnn.NetworkWithInputEncoding(n_input_dims=3, n_output_dims=1, encoding_config=config["encoding"], network_config=network).to(device)
-	# model = FastNerf(config["encoding"], config["network"]).to(device)
+	if config["output"]["path"] == "as_config":
+		out_dir = os.path.splitext(args.config)[0]
+		try:
+			os.mkdir(out_dir)
+		except FileExistsError:
+			print(f"Overwriting previous results...")
+	else:
+		out_dir = f'out/{uuid.uuid4().hex[0:7]}'
+		os.mkdir(out_dir)
 
 	if not args.load_checkpoint:
 		optim = config["optim"]
@@ -98,12 +95,10 @@ if __name__ == '__main__':
 		interval = config["output"].get("interval", 10)
 		n_images = config["data"].get("n_images")
 		intermediate_slices = config["output"].get("intermediate_slices", True)
-		run_name = uuid.uuid4().hex[0:7] if config["output"]["path"] == "hash" else f"out_{n_images}"
-		path_slices = f'{out_dir}/{run_name}'
-		print(f"Output will be written to {path_slices}.")
+		print(f"Output will be written to {out_dir}.")
 
 		print(f"Loading training data...")
-		training_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), scale=object_size, n_chan=c, noise_level=data_config["noise_mean"], noise_sd=data_config["noise_sd"], n_train=data_config["n_images"])
+		training_dataset = ImagesDataset(data_name, data_config["transforms_file"], split="train", img_wh=(w,h), scale=object_size, n_chan=c, noise_level=data_config["noise_level"], n_train=data_config["n_images"])
 		if optim["pixel_importance_sampling"]:
 			pixel_weights = training_dataset.get_pixel_values()
 			sampler = WeightedRandomSampler(pixel_weights, len(pixel_weights))
@@ -111,7 +106,7 @@ if __name__ == '__main__':
 		else:
 			data_loader = DataLoader(training_dataset, optim["batchsize"], shuffle=True)
 		training_im = training_dataset[:w*h,6:]
-		# my.write_img(, f"out/{run_name}-train-img-{args.noise:.0e}-{args.noise_sd:.0f}.png")
+		writer.write_img(training_im.data.reshape(h, w).clamp(0.0, 1.0).detach().cpu().numpy(), f"{out_dir}/training-img.png")
 
 		model_optimizer = torch.optim.Adam(model.parameters(), lr=optim["learning_rate"])
 		scheduler = torch.optim.lr_scheduler.MultiStepLR(model_optimizer, milestones=optim["milestones"], gamma=optim["gamma"])
@@ -130,7 +125,7 @@ if __name__ == '__main__':
 					ray_directions = batch[:, 3:6].to(device)
 					ground_truth_px_values = batch[:, 6].to(device)
 
-					regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=near, hf=far, nb_bins=optim["samples_per_ray"])
+					regenerated_px_values = get_pixel_values(model, ray_origins, ray_directions, hn=near, hf=far, nb_bins=optim["samples_per_ray"])
 					
 					loss = loss_function(regenerated_px_values, ground_truth_px_values)
 					model_optimizer.zero_grad()
@@ -138,33 +133,33 @@ if __name__ == '__main__':
 					model_optimizer.step()
 					training_loss_db.append(linear_to_db(loss.item()))
 					if intermediate_slices and (batch_num % interval == 0):
-						write_slices(model, device, ep, batch_num, config["output"], path_slices) # output slices during training
+						write_slices(model, device, ep, batch_num, config["output"], out_dir) # output slices during training
 						interval *= 10 # intermediate slices only written during first epoch
 				scheduler.step()
 				torch.save(model.cpu(), 'nerf_model') # save after each epoch
 				model.to(device)
 				t.set_postfix(loss=f"{training_loss_db[-1]:.1f} dB per pixel")
 
-		write_slices(model, device, ep, batch_num, config["output"], path_slices) 
+		write_slices(model, device, ep, batch_num, config["output"], out_dir) 
 
 		training_time = time.monotonic() - now
 		timestamp = time.strftime("%Y_%m_%d_%H:%M:%S")
 
-		snapshot_path = f"checkpoints/{run_name}.pt"
+		snapshot_path = f"{out_dir}/checkpoint.pt"
 		torch.save(model.state_dict(), snapshot_path)
 		trained_model = model
 		print(f"Training complete. Model weights saved as {snapshot_path}")
 	else:
-		run_name = args.load_checkpoint
-		snapshot_path = f"checkpoints/{run_name}.pt"
+		snapshot = args.load_checkpoint
+		print(f"Loading model from {snapshot}")
 		training_loss = None # no info
 		trained_model = model
-		trained_model.load_state_dict(torch.load(snapshot_path))
+		trained_model.load_state_dict(torch.load(snapshot))
 		trained_model.eval()
 
 	has_gt = True if config["data"]["dataset"] == "jaw" else False
 	if has_gt:
-		phantom = np.load("jaw/jaw_phantom.npy")
+		phantom = np.load("data/jaw/jaw_phantom.npy")
 
 	test_device = config["hardware"]["test"]
 	trained_model.to(test_device)
@@ -173,7 +168,7 @@ if __name__ == '__main__':
 	
 	if output["images"]:
 		# no noise in test data
-		testing_dataset = BlenderDataset(data_name, data_config["transforms_file"], split="test", img_wh=(w,h), scale=object_size, n_chan=c)
+		testing_dataset = ImagesDataset(data_name, data_config["transforms_file"], split="test", img_wh=(w,h), scale=object_size, n_chan=c)
 		for img_index in range(1):
 			test_loss, imgs = test_model(model=trained_model, dataset=testing_dataset, img_index=img_index, hn=near, hf=far, device=test_device, nb_bins=output["samples_per_ray"], H=h, W=w)
 			cpu_imgs = [img.data.reshape(h, w).clamp(0.0, 1.0).detach().cpu().numpy() for img in imgs]
@@ -183,42 +178,31 @@ if __name__ == '__main__':
 			
 			NB_RAYS = 5
 			ray_ids = torch.randint(0, h*w, (NB_RAYS,)) # 5 random rays
-			px_vals = my.get_px_values(ray_ids, w) 
+			px_vals = writer.get_px_values(ray_ids, w) 
 		
 			ray_origins = view[ray_ids,:3].squeeze(0)
 			ray_directions = view[ray_ids,3:6].squeeze(0)
 
 			points, delta = get_points_along_rays(ray_origins, ray_directions, hn=near, hf=far, nb_bins=output["samples_per_ray"])
-		
-			# since x are calculated randomly, we need to pass in the same values
 			sigma = get_ray_sigma(trained_model, points, device=test_device)
 			
 			if has_gt:
 				sigma_gt = get_sigma_gt(points.cpu().numpy(), phantom)
 				sigma_gt = sigma_gt.reshape(NB_RAYS,-1)
-				jitter = 0.005*np.random.rand(NB_RAYS,1)
-				sigma_gt = sigma_gt + jitter # add some jitter to distinguish values
 			else:
-				sigma_gt = None
+				sigma_gt = np.zeros(0) # essentially empty array, so won't be shown
 
 			sigma = sigma.data.cpu().numpy().reshape(NB_RAYS,-1)
 			# text = f"test_loss: {test_loss:.1f}dB, training_loss: {float(final_training_loss_db):.1f}dB, lr: {lr:.2E}, loss function: {loss}, training noise level (sd): {args.noise} ({args.noise*(args.noise_sd/256)})\nepochs: {epochs}, layers: {layers}, neurons: {neurons}, embed_dim: {embed_dim}, training time (h): {training_time/3600:.2f}\nnumber of training images: {args.n_train}, img_size: {img_size}, samples per ray: {samples}, pixel importance sampling: {args.importance_sampling}\n"
 			text = f"test loss: {test_loss}"
 
-			my.write_imgs((cpu_imgs, training_loss_db, sigma, sigma_gt, px_vals), f'out/{run_name}_loss_{img_index}.png', text, show_training_img=False)
+			writer.write_imgs((cpu_imgs, training_loss_db, sigma, sigma_gt, px_vals), f'{out_dir}/loss_{img_index}.png', text, show_training_img=False)
 
-
-	if output["slices"]:
-		# stich together slices into a video
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_x_%04d.png -vf \"hflip\" out/{run_name}_slices_x.mp4"
-		os.system(sys_command)
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_y_%04d.png -vf \"hflip\" out/{run_name}_slices_y.mp4"
-		os.system(sys_command)
-		sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_z_%04d.png -vf \"hflip\" out/{run_name}_slices_z.mp4"
-		os.system(sys_command)
-
-
-	# is_voxel_grid = True if (data_name == 'jaw') else False 
-	# MAX_BRIGHTNESS = 2.5 if (data_name == 'jaw') else 10
-
-	
+	# if output["slices"]:
+	# 	# stich together slices into a video
+	# 	sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_x_%04d.png -vf \"hflip\" out/{run_name}_slices_x.mp4"
+	# 	os.system(sys_command)
+	# 	sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_y_%04d.png -vf \"hflip\" out/{run_name}_slices_y.mp4"
+	# 	os.system(sys_command)
+	# 	sys_command = f"ffmpeg -hide_banner -loglevel error -r 5 -i tmp/{run_name}_z_%04d.png -vf \"hflip\" out/{run_name}_slices_z.mp4"
+	# 	os.system(sys_command)

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import json
+import sys
 
 class FastNerf(nn.Module):
 
@@ -15,19 +15,25 @@ class FastNerf(nn.Module):
 			# embed_dim is maximum value of frequency in sin/cos
 			# additional 3 is for bias terms in x,y,z when frequency=0
 			input_dim = 3 * (2 * encoding["n_frequencies"] + 1)
-		else:
+		elif encoding["otype"] == "None":
 			# No encoding is actually just n_frequencies = 0!
 			input_dim = 3
+		else:
+			print("============================================================")
+			print("ERROR: Encoding not recognised.  otype must be 'Frequency' or 'None'.")
+			print("For other encodings, please install the tiny-cuda-nn extension for PyTorch.")
+			print("Exiting...")
+			sys.exit()
 
 		# Set up the MLP:
 
-		hidden_dim = network["neurons_per_layer"]
+		hidden_dim = network["n_neurons"]
 		
 		self.Fpos = nn.Sequential()
 		self.Fpos.add_module(f"input", nn.Linear(input_dim, hidden_dim))
 		self.Fpos.add_module(f"input_relu", nn.ReLU())
 
-		for i in range(network["n_layers"]):
+		for i in range(network["n_hidden_layers"]):
 			self.Fpos.add_module(f"hidden_{i}", nn.Linear(hidden_dim, hidden_dim)) 
 			self.Fpos.add_module(f"relu_{i}", nn.ReLU())
 								  

@@ -1,10 +1,11 @@
 # from scipy.interpolate import interpn
 from skimage import io
+from PIL import Image
 
 import numpy as np
 
 class NerfImage():
-    def __init__(self, path, img_transform, im_wh):
+    def __init__(self, path, img_transform, noise_level, im_wh):
         numpy_image = io.imread(path)
         dtype = numpy_image.dtype
         assert (dtype == 'uint8') or (dtype == 'uint16'), 'unknown datatype'
@@ -13,6 +14,12 @@ class NerfImage():
         h, w = numpy_image.shape 
         assert h > w, 'data might be wrong way round!'
         img = img_transform(numpy_image, im_wh)
+
+        # add noise if applicable
+        noise_sd = 64 # noise centred at 128, sd can be changed if desired
+        noise = Image.effect_noise((im_wh[1], im_wh[0]), noise_sd) # pillow and numpy shapes are swapped round
+        noise = np.array(noise, dtype=np.float32)  /256. # rescale
+        img = (img + noise_level*(noise - 0.5)).clip(0,1) # noise centred at 0.5
 
         # rescale
         self.image = img

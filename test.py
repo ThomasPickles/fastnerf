@@ -2,9 +2,9 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
 
-from render import render_rays, get_points_along_rays, get_points_in_slice, get_voxels_in_slice
+from render import get_pixel_values, get_points_along_rays, get_points_in_slice, get_voxels_in_slice
 from datasets import get_params
-from helpers import *
+from chart_writer import *
 from sampling import get_samples_around_point
 
 class IndexedDataset(Dataset):
@@ -80,7 +80,7 @@ def render_image(model, frame, **params):
 	for batch, idx in data:
 		ray_origins = batch[...,:3].squeeze(0).to(device)
 		ray_directions = batch[...,3:6].squeeze(0).to(device)
-		regenerated_px_values = render_rays(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins)
+		regenerated_px_values = get_pixel_values(model, ray_origins, ray_directions, hn=hn, hf=hf, nb_bins=nb_bins)
 		img_tensor[idx,...] = regenerated_px_values.cpu()
 
 	return img_tensor

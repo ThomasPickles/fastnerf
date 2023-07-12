@@ -18,7 +18,7 @@ def get_voxels_in_slice(z0, device, resolution):
 	return voxs 
 
 def get_points_in_slice(dim, device, resolution):
-	plane = 1 - 92./331.
+	plane = 0.5 # 1 - 92./331.
 	half_dx = 1./resolution[0]
 	half_dy = 1./resolution[1]
 	d1s = torch.linspace(0.+half_dx, 1.-half_dx, steps=resolution[0], device=device)
@@ -51,7 +51,7 @@ def get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins):
 	return x.reshape(-1, 3), delta
 
 
-def render_rays(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins):
+def get_pixel_values(nerf_model, ray_origins, ray_directions, hn, hf, nb_bins):
 	x, delta = get_points_along_rays(ray_origins, ray_directions, hn, hf, nb_bins)
 	sigma = nerf_model(x) # [batch_size*(nb_bins-1), 1]
 	sigma = sigma.reshape(-1, nb_bins)
