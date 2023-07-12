@@ -1,6 +1,6 @@
 # JSON Configuration Documentation
 
-This document lists the JSON parameters of all components of configuration files.  An example config file is available at [config/test_config.json].
+This document lists the JSON parameters of all components of configuration files.  An example config file is available at [[config/test_config.json]].
 
 For each component, I provide a sample configuration that lists each parameter's default value.
 
