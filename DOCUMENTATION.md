@@ -1,8 +1,8 @@
 # JSON Configuration Documentation
 
-This document lists the JSON parameters of all components of .
+This document lists the JSON parameters of all components of configuration files.  An example config file is available at [config/test_config.json].
 
-For each component, we provide a sample configuration that lists each parameter's default value.
+For each component, I provide a sample configuration that lists each parameter's default value.
 
 __Network__ and __Encoding__ config options are inherited from tiny cuda [documentation](https://github.com/NVlabs/tiny-cuda-nn/blob/master/DOCUMENTATION.md)
 
